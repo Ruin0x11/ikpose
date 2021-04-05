@@ -332,7 +332,6 @@ export function findBoneIndexByBoneName(boneList: THREE.Bone[], name: string): n
 export function findBoneIndexByEndsName(boneList: THREE.Bone[], name: string): number {
     var index = -1;
     for (var i = 0; i < boneList.length; i++) {
-        console.log(boneList[i].name.toLowerCase(), name.toLowerCase())
         if (boneList[i].name.toLowerCase().endsWith(name.toLowerCase())) {
             return i;
         }
@@ -347,7 +346,6 @@ export function findBoneByBoneName(boneList: THREE.Bone[], name: string): THREE.
 
 export function findBoneByEndsName(boneList: THREE.Bone[], name: string): THREE.Bone {
     for (var i = 0; i < boneList.length; i++) {
-        console.log(boneList[i].name.toLowerCase(), name.toLowerCase())
         if (boneList[i].name.toLowerCase().endsWith(name.toLowerCase())) {
             return boneList[i];
         }
@@ -416,7 +414,7 @@ export function convertToZeroRotatedBoneMesh(mesh: THREE.SkinnedMesh) {
 export function resetBone(mesh: THREE.SkinnedMesh, boneSelectedIndex: number) {
     var boneList = getBoneList(mesh);
     var bone = boneList[boneSelectedIndex];
-    bone.matrixWorld.getInverse(mesh.skeleton.boneInverses[boneSelectedIndex]);
+    mesh.skeleton.boneInverses[boneSelectedIndex].copy(bone.matrixWorld).invert();
     if (bone.parent && bone.parent instanceof THREE.Bone) {
         var parentIndex = boneList.indexOf(bone.parent);
         var parentMatrix = mesh.skeleton.boneInverses[parentIndex];

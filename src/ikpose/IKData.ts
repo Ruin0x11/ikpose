@@ -1,8 +1,6 @@
 import * as THREE from "three";
 
 export class IKData {
-    public limitMin: THREE.Vector3 = new THREE.Vector3();
-    public limitMax: THREE.Vector3 = new THREE.Vector3();
     public target: THREE.Mesh;
     public boneRatio: number = 1;
 

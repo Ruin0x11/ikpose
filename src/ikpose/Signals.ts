@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { SignalDispatcher, SimpleEventDispatcher } from "strongly-typed-events";
+import { IKModel } from "./IKModel";
 
 export class Signals {
     public _onBoneSelectionChanged = new SimpleEventDispatcher<number>();
@@ -17,22 +18,27 @@ export class Signals {
         return this._onBoneRotateChanged.asEvent();
     }
 
-    public _onTransformSelectionChanged = new SimpleEventDispatcher<THREE.Mesh>();
+    public _onBoneRotateFinished = new SimpleEventDispatcher<number>();
+    public get onBoneRotateFinished() {
+        return this._onBoneRotateFinished.asEvent();
+    }
+
+    public _onTransformSelectionChanged = new SimpleEventDispatcher<THREE.Object3D>();
     public get onTransformSelectionChanged() {
         return this._onTransformSelectionChanged.asEvent();
     }
 
-    public _onTransformStarted = new SimpleEventDispatcher<THREE.Mesh>();
+    public _onTransformStarted = new SimpleEventDispatcher<THREE.Object3D>();
     public get onTransformStarted() {
         return this._onTransformStarted.asEvent();
     }
 
-    public _onTransformFinished = new SimpleEventDispatcher<THREE.Mesh>();
+    public _onTransformFinished = new SimpleEventDispatcher<THREE.Object3D>();
     public get onTransformFinished() {
         return this._onTransformFinished.asEvent();
     }
 
-    public _onTransformChanged = new SimpleEventDispatcher<THREE.Mesh>();
+    public _onTransformChanged = new SimpleEventDispatcher<THREE.Object3D>();
     public get onTransformChanged() {
         return this._onTransformChanged.asEvent();
     }
@@ -52,8 +58,13 @@ export class Signals {
         return this._onIkSettingChanged.asEvent();
     }
 
-    public _onIkSelectionChanged = new SimpleEventDispatcher<string>();
+    public _onIkSelectionChanged = new SimpleEventDispatcher<[THREE.Object3D, string]>();
     public get onIkSelectionChanged() {
         return this._onIkSelectionChanged.asEvent();
+    }
+
+    public _onLoadingModelFinished = new SimpleEventDispatcher<IKModel>();
+    public get onLoadingModelFinished() {
+        return this._onLoadingModelFinished.asEvent();
     }
 }

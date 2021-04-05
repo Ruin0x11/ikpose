@@ -14,10 +14,10 @@ export class IKModel {
 
     private _onpc: ISignalHandler;
 
-    private _ontsc: ISimpleEventHandler<THREE.Mesh>;
-    private _onts: ISimpleEventHandler<THREE.Mesh>;
-    private _ontf: ISimpleEventHandler<THREE.Mesh>;
-    private _ontc: ISimpleEventHandler<THREE.Mesh>;
+    private _ontsc: ISimpleEventHandler<THREE.Object3D>;
+    private _onts: ISimpleEventHandler<THREE.Object3D>;
+    private _ontf: ISimpleEventHandler<THREE.Object3D>;
+    private _ontc: ISimpleEventHandler<THREE.Object3D>;
 
     private _onbtc: ISimpleEventHandler<number>;
 
@@ -44,6 +44,8 @@ export class IKModel {
 
         this._onbtc = () => this.ikController.resetAllIkTargets();
         this.signals.onBoneTranslateChanged.subscribe(this._onbtc);
+
+        this.signals._onLoadingModelFinished.dispatch(this);
     }
 
     addToScene(scene: THREE.Scene) {
@@ -54,8 +56,8 @@ export class IKModel {
         })
     }
 
-    update() {
-        this.boneAttachController.update(true);
+    update(delta: number) {
+        this.vrm.update(delta);
     }
 
     dispose() {

@@ -9,13 +9,16 @@ import { BoneAttachController } from "./BoneAttachController";
 import { IKController } from "./IKController";
 import { IKData } from "./IKData";
 
+import BoneName = VRMSchema.HumanoidBoneName;
+
 export class HumanoidIK implements IIKSettings {
     public endSites: Array<any> = [];
     public ikTargets: any = {};
     public objects: Array<THREE.Object3D> = [];
 
-    private bodyHumanBoneNames: Array<string> = ["hips", "spine", "chest", "upperChest", "neck", "head"];
-    private humanBoneMap: Map<VRMHumanBone, string>;
+    private bodyHumanBoneNames: Array<string> = [BoneName.Hips, BoneName.Spine, BoneName.Chest, BoneName.UpperChest, BoneName.Neck, BoneName.Head];
+    private humanBoneMap: Map<BoneName, string>;
+    private boneIkMap: Map<string, string>;
     private boneList: THREE.Bone[];
 
     private headBoneNames: Array<string>;
@@ -26,44 +29,32 @@ export class HumanoidIK implements IIKSettings {
     private hipBoneNames: Array<string>;
 
     constructor(private readonly ikController: IKController, private readonly boneAttachController: BoneAttachController, vrm: VRM) {
-        var scope = this;
-
         var humanBones = vrm.humanoid.humanBones;
 
-        var humanBoneMap = new Map<VRMHumanBone, string>();
+        var humanBoneMap = new Map<BoneName, string>();
         for (let name in humanBones) {
-            let bones = humanBones[name as VRMSchema.HumanoidBoneName];
-            bones.forEach((bone, i) => humanBoneMap[name] = name)
+            let bones = humanBones[name];
+            // bones.forEach((bone, i) => humanBoneMap[name] = bone.node.name)
+            if (bones[0]) {
+                humanBoneMap[name] = bones[0].node.name
+            }
         }
         this.humanBoneMap = humanBoneMap;
 
+        this.boneIkMap = new Map();
+
         this.boneList = BoneUtils.getBoneList(vrm.scene as unknown as THREE.SkinnedMesh);
 
-        var headIkHumanBoneNames = ["spine", "chest", "upperChest", "neck", "head"];
-
-        var headBoneNames = [];
-        headIkHumanBoneNames.forEach(function(name) {
-            var boneName = humanBoneMap[name];
-            if (boneName) {
-                headBoneNames.push(boneName);
-            } else {
-                throw new Error("Bone " + boneName + "not found")
-            }
-        });
-        this.headBoneNames = headBoneNames;
-        this.registIk(this.ikTargets, "Head", headBoneNames);
-
-        function resolveMapBoneName(humanBoneNames: string[]) {
+        function resolveMapBoneName(humanBoneNames: BoneName[]) {
             var result = [];
-            humanBoneNames.forEach(function(name: string) {
-                var boneName = humanBoneMap[name];
-                if (boneName) {
-
-                    var bone = BoneUtils.findBoneByEndsName(scope.boneList, boneName);
+            humanBoneNames.forEach(function(name: BoneName) {
+                var bones = humanBones[name];
+                if (bones) {
+                    var bone = bones[0];
                     if (bone != null) {
-                        result.push(boneName);
+                        result.push(bone.node.name);
                     } else {
-                        console.log("humanBoneMap:found on map not in bonelist", boneName);
+                        console.log("humanBoneMap:found on map not in bonelist", name);
                     }
 
                 } else {
@@ -74,22 +65,24 @@ export class HumanoidIK implements IIKSettings {
             return result;
         }
 
-        this.leftArmBoneNames = resolveMapBoneName(["l_shoulder", "l_upperArm", "l_lowerArm", "l_hand"]);
+        this.headBoneNames = resolveMapBoneName([BoneName.Spine, BoneName.Chest, BoneName.UpperChest, BoneName.Neck, BoneName.Head]);
+        this.registIk(this.ikTargets, "Head", this.headBoneNames);
+
+        this.leftArmBoneNames = resolveMapBoneName([BoneName.LeftShoulder, BoneName.LeftUpperArm, BoneName.LeftLowerArm, BoneName.LeftHand]);
         this.registIk(this.ikTargets, "LeftArm", this.leftArmBoneNames);
 
-        this.rightArmBoneNames = resolveMapBoneName(["rightShoulder", "rightUpperArm", "rightLowerArm", "rightHand"]);
-        this.registIk(this.ikTargets, "rightArm", this.rightArmBoneNames);
+        this.rightArmBoneNames = resolveMapBoneName([BoneName.RightShoulder, BoneName.RightUpperArm, BoneName.RightLowerArm, BoneName.RightHand]);
+        this.registIk(this.ikTargets, "RightArm", this.rightArmBoneNames);
 
-        this.leftLegBoneNames = resolveMapBoneName(["leftUpperLeg", "leftLowerLeg", "leftFoot"]);
+        this.leftLegBoneNames = resolveMapBoneName([BoneName.LeftUpperLeg, BoneName.LeftLowerLeg, BoneName.LeftFoot]);
         this.registIk(this.ikTargets, "LeftLeg", this.leftLegBoneNames);
 
-        this.rightLegBoneNames = resolveMapBoneName(["rightUpperLeg", "rightLowerLeg", "rightFoot"]);
-        this.registIk(this.ikTargets, "rightLeg", this.rightLegBoneNames);
+        this.rightLegBoneNames = resolveMapBoneName([BoneName.RightUpperLeg, BoneName.RightLowerLeg, BoneName.RightFoot]);
+        this.registIk(this.ikTargets, "RightLeg", this.rightLegBoneNames);
 
-
-        this.hipBoneNames = resolveMapBoneName(["hips", "spine"]);
+        this.hipBoneNames = resolveMapBoneName([BoneName.Hips, BoneName.Spine]);
         if (this.hipBoneNames.length > 1) {
-            this.registIk(this.ikTargets, "hip", this.hipBoneNames);
+            this.registIk(this.ikTargets, "Hip", this.hipBoneNames);
         }
 
 
@@ -128,6 +121,7 @@ export class HumanoidIK implements IIKSettings {
                 console.error("registIk:bone not contain," + name);
             }
             indices.push(index);
+            scope.boneIkMap[name] = ikName;
         });
 
         //add endsite
@@ -137,7 +131,7 @@ export class HumanoidIK implements IIKSettings {
           diff.setLength(10);*/
         //diff.add(list[indices[indices.length-1]].position);
 
-        var endsite = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshBasicMaterial({ color: 0x008800, depthTest: false, transparent: true, opacity: .5 }));
+        var endsite = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.02, 0.02), new THREE.MeshBasicMaterial({ color: 0x008800, depthTest: false, transparent: true, opacity: .5 }));
         endsite.renderOrder = 2;
         list[indices[indices.length - 1]].add(endsite);
         list[indices[indices.length - 1]].userData.endsite = endsite;
@@ -151,13 +145,13 @@ export class HumanoidIK implements IIKSettings {
         material.depthTest = false;
         material.transparent = true;
         material.opacity = 0.25;
-        // material.renderOrder = 2;
+        joint.renderOrder = 2;
         material.visible = false;
         endsite.userData.joint = joint;
 
         scope.endSites.push(endsite);
 
-        var ikBox = new THREE.Mesh(new THREE.BoxGeometry(5, 5, 5), new THREE.MeshBasicMaterial({ color: 0x880000, depthTest: false, transparent: true, opacity: .5 }));
+        var ikBox = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.05), new THREE.MeshBasicMaterial({ color: 0x880000, depthTest: false, transparent: true, opacity: .5 }));
         ikBox.name = "ik-c-" + ikName;
         ikBox.renderOrder = 1;
         var index = indices.length - 1;
@@ -168,48 +162,47 @@ export class HumanoidIK implements IIKSettings {
         this.ikController.iks[ikName].target = ikBox;
     }
 
-    limitBone(boneList: THREE.Bone[], humanoidBoneName: string, minX: number, minY: number, minZ: number, maxX: number, maxY: number, maxZ: number) {
-        var endName = this.humanBoneMap[humanoidBoneName];
-        if (!endName) {
-            endName = humanoidBoneName;//maybe root
-            console.log("humanoidBoneName not exist map.Use directly name ", humanoidBoneName);
+    limitBone(boneList: THREE.Bone[], humanoidBoneName: BoneName, minX: number, minY: number, minZ: number, maxX: number, maxY: number, maxZ: number) {
+        var threeBoneName = this.humanBoneMap[humanoidBoneName]
+        if (!threeBoneName) {
+            throw new Error("Not found: " + humanoidBoneName)
         }
 
-        var name = endName;
+        var name = threeBoneName;
 
-        this.ikController.iks[name].limitMin = new THREE.Vector3(minX, minY, minZ);
-        this.ikController.iks[name].limitMax = new THREE.Vector3(maxX, maxY, maxZ);
+        this.ikController.ikLimitMin[threeBoneName] = new THREE.Vector3(minX, minY, minZ);
+        this.ikController.ikLimitMax[threeBoneName] = new THREE.Vector3(maxX, maxY, maxZ);
     }
 
     initlimitBone() {
         var boneList = this.boneList;
 
         //body
-        this.limitBone(boneList, "root", -180, -180, -180, 180, 180, 180);
-        this.limitBone(boneList, "hips", -180, -180, -180, 180, 180, 180);
-        this.limitBone(boneList, "spine", -15, -30, -20, 15, 30, 20);
-        this.limitBone(boneList, "chest", -45, -30, -20, 45, 30, 20);
-        this.limitBone(boneList, "upperChest", -45, -30, -20, 45, 30, 20);
-        this.limitBone(boneList, "neck", -45, -45, -10, 45, 45, 10);
-        this.limitBone(boneList, "head", -15, -30, -20, 15, 30, 20);
+        // this.limitBone(boneList, BoneName.Root, -180, -180, -180, 180, 180, 180);
+        this.limitBone(boneList, BoneName.Hips, -180, -180, -180, 180, 180, 180);
+        this.limitBone(boneList, BoneName.Spine, -15, -30, -20, 15, 30, 20);
+        this.limitBone(boneList, BoneName.Chest, -45, -30, -20, 45, 30, 20);
+        this.limitBone(boneList, BoneName.UpperChest, -45, -30, -20, 45, 30, 20);
+        this.limitBone(boneList, BoneName.Neck, -45, -45, -10, 45, 45, 10);
+        this.limitBone(boneList, BoneName.Head, -15, -30, -20, 15, 30, 20);
 
-        this.limitBone(boneList, "leftShoulder", 0, 0, -45, 0, 15, 0);
-        this.limitBone(boneList, "leftUpperArm", -45, -75, -45, 45, 45, 85);
-        this.limitBone(boneList, "leftLowerArm", -0, -150, 0, 0, 0, 0);
-        this.limitBone(boneList, "leftHand", 0, 0, -45, 0, 45, 65);
+        this.limitBone(boneList, BoneName.LeftShoulder, 0, 0, -45, 0, 15, 0);
+        this.limitBone(boneList, BoneName.LeftUpperArm, -45, -75, -45, 45, 45, 85);
+        this.limitBone(boneList, BoneName.LeftLowerArm, -0, -150, 0, 0, 0, 0);
+        this.limitBone(boneList, BoneName.LeftHand, 0, 0, -45, 0, 45, 65);
 
-        this.limitBone(boneList, "rightShoulder", 0, -15, 0, 0, 0, 45);
-        this.limitBone(boneList, "rightUpperArm", -45, -45, -85, 45, 75, 45);
-        this.limitBone(boneList, "rightLowerArm", 0, 0, 0, 0, 150, 0);
-        this.limitBone(boneList, "rightHand", 0, -45, -65, 0, 0, 45);
+        this.limitBone(boneList, BoneName.RightShoulder, 0, -15, 0, 0, 0, 45);
+        this.limitBone(boneList, BoneName.RightUpperArm, -45, -45, -85, 45, 75, 45);
+        this.limitBone(boneList, BoneName.RightLowerArm, 0, 0, 0, 0, 150, 0);
+        this.limitBone(boneList, BoneName.RightHand, 0, -45, -65, 0, 0, 45);
 
-        this.limitBone(boneList, "leftUpperLeg", -60, 0, -75, 120, 0, 75);
-        this.limitBone(boneList, "leftLowerLeg", -160, 0, 0, 0, 0, 0);
-        this.limitBone(boneList, "leftFoot", -15, -5, -5, 15, 5, 5);
+        this.limitBone(boneList, BoneName.LeftUpperLeg, -60, 0, -75, 120, 0, 75);
+        this.limitBone(boneList, BoneName.LeftLowerLeg, -160, 0, 0, 0, 0, 0);
+        this.limitBone(boneList, BoneName.LeftFoot, -15, -5, -5, 15, 5, 5);
 
-        this.limitBone(boneList, "rightUpperLeg", -60, 0, -75, 120, 0, 75);
-        this.limitBone(boneList, "rightLowerLeg", -160, 0, 0, 0, 0, 0);
-        this.limitBone(boneList, "rightFoot", -15, -5, -5, 15, 5, 5);
+        this.limitBone(boneList, BoneName.RightUpperLeg, -60, 0, -75, 120, 0, 75);
+        this.limitBone(boneList, BoneName.RightLowerLeg, -160, 0, 0, 0, 0, 0);
+        this.limitBone(boneList, BoneName.RightFoot, -15, -5, -5, 15, 5, 5);
 
         /*boneList.forEach(function(bone){
           limitBone(boneList,bone.name,-180,-180,-180,180,180,180);
@@ -245,9 +238,10 @@ export class HumanoidIK implements IIKSettings {
           this.limitBone(boneList,"head",-15,-15,-20,15,15,20);*/
 
         //copy to default
+        var scope = this;
         Object.keys(this.ikController.iks).forEach(function(key) {
-            this.ikController.ikDefaultLimitMin[key] = new THREE.Vector3(this.ikController.iks[key].limitMin)
-            this.ikController.ikDefaultLimitMax[key] = new THREE.Vector3(this.ikController.iks[key].limitMax)
+            scope.ikController.ikDefaultLimitMin[key] = new THREE.Vector3(scope.ikController.iks[key].limitMin)
+            scope.ikController.ikDefaultLimitMax[key] = new THREE.Vector3(scope.ikController.iks[key].limitMax)
         });
 
         //send ref

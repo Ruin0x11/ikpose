@@ -7,14 +7,16 @@ import { BoneAttachController } from "./BoneAttachController";
 import { IIKSettings } from "./IIKSettings";
 import { IKData } from "./IKData";
 import { Signals } from "./Signals";
-import { IEventHandler, ISignalHandler, ISimpleEventHandler } from "strongly-typed-events";
+import { ISignalHandler, ISimpleEventHandler } from "strongly-typed-events";
 
 export class IKController {
-    public logging: boolean;
+    public logging: boolean = false;
 
     public iks: Map<string, IKData> = new Map();
     private ikSettings: IIKSettings;
 
+    public ikLimitMin: Map<string, THREE.Vector3> = new Map();
+    public ikLimitMax: Map<string, THREE.Vector3> = new Map();
     public ikDefaultLimitMin: Map<string, THREE.Vector3> = new Map();
     public ikDefaultLimitMax: Map<string, THREE.Vector3> = new Map();
     private ikBoneRatio: any = {};
@@ -58,9 +60,9 @@ export class IKController {
         this._pos = new THREE.Vector3();
     }
 
-    public onIkSelectionChanged(ikName: string) {
+    public onIkSelectionChanged(target: [THREE.Object3D, string]) {
         if (this.logging) {
-            console.log("onIkSelectionChanged called", ikName);
+            console.log("onIkSelectionChanged called", target);
         }
         // var newTarget = this.getIkTargetFromName(ikName);
         // ap.signals.transformSelectionChanged.dispatch(newTarget);
@@ -114,15 +116,18 @@ export class IKController {
             var length = endsite.userData.length ? endsite.userData.length : 10;
 
             endsite.position.copy(diff);
-            endsite.userData.joint.geometry.vertices[0].copy(diff);
-            endsite.userData.joint.geometry.verticesNeedUpdate = true;
+            let joint = endsite.userData.joint as THREE.Line;
+            joint.geometry.attributes.position.setX(0, diff.x);
+            joint.geometry.attributes.position.setY(0, diff.y);
+            joint.geometry.attributes.position.setZ(0, diff.z);
+            joint.geometry.attributes.position.needsUpdate = true;
         });
     }
 
     private _onbsc: ISimpleEventHandler<number>;
     private _onpc: ISignalHandler;
     private _onsic: ISignalHandler;
-    private _onisc: ISimpleEventHandler<string>;
+    private _onisc: ISimpleEventHandler<[THREE.Object3D, string]>;
     private _onbrc: ISimpleEventHandler<number>;
 
     public initialize(ikSettings: IIKSettings) {
@@ -138,7 +143,7 @@ export class IKController {
         this._onsic = () => this.solveIk(true);
         this.signals.onSolveIkCalled.subscribe(this._onsic);
 
-        this._onisc = (ikName: string) => this.onIkSelectionChanged(ikName)
+        this._onisc = (target) => this.onIkSelectionChanged(target)
         this.signals.onIkSelectionChanged.subscribe(this._onisc);
 
         /*
@@ -181,7 +186,7 @@ export class IKController {
     }
 
 
-    public getIkNameFromTarget(target: THREE.Mesh) {
+    public getIkNameFromTarget(target: THREE.Object3D) {
         if (target == null || target == undefined) {
             return target;
         }
@@ -256,9 +261,9 @@ export class IKController {
 
     public isEnableEndSiteByName(name: string) {
         var target = this.iks[name].target;
-        var indices = this.iks[name];
+        var ik = this.iks[name];
 
-        var index = indices[indices.length - 1];
+        var index = ik.indices[ik.indices.length - 1];
         var object = this.boneAttachController.getContainerList()[index];
 
         return this.enableEndSite(object);
@@ -283,8 +288,8 @@ export class IKController {
 
     public getLastPosition(name: string) {
         var target = this.iks[name].target;
-        var indices = this.iks[name];
-        var index = indices[indices.length - 1];
+        var ik = this.iks[name];
+        var index = ik.indices[ik.indices.length - 1];
         var lastMesh = this.boneAttachController.getContainerList()[index];
         var position = lastMesh.position;
 
@@ -299,9 +304,9 @@ export class IKController {
         if (target == undefined) {
             console.error("setEndSiteEnabled:No target found ", name);
         }
-        var indices = this.iks[name];
+        var ik = this.iks[name];
 
-        var index = indices[indices.length - 1];
+        var index = ik.indices[ik.indices.length - 1];
 
         var lastMesh = this.boneAttachController.getContainerList()[index];
 
@@ -317,9 +322,9 @@ export class IKController {
         if (!target) {
             console.error("setEndSiteEnabled:No target found ", name);
         }
-        var indices = this.iks[name];
+        var ik = this.iks[name];
 
-        var index = indices[indices.length - 1];
+        var index = ik.indices[ik.indices.length - 1];
 
         var lastMesh = this.boneAttachController.getContainerList()[index];
 
@@ -336,7 +341,7 @@ export class IKController {
         });
     }
 
-    public setIkTarget(target: THREE.Mesh) {
+    public setIkTarget(target: THREE.Object3D) {
         if (target == null) {
             this.selectedIk = null;
         } else {
@@ -362,31 +367,29 @@ export class IKController {
         this.setIkTarget(current.target);
     }
 
-    public onTransformSelectionChanged(target: THREE.Mesh) {
+    public onTransformSelectionChanged(target: THREE.Object3D) {
         var scope = this;
         // ap.getSignal("ikSelectionChanged").remove(this.onIkSelectionChanged);
 
         function onNotSelected() {
             scope.setIkTarget(null);
-            // ap.getSignal("ikSelectionChanged").dispatch(null);
+            scope.signals._onIkSelectionChanged.dispatch(null);
             scope.resetAllIkTargets(null);//should add signal?
         }
 
         if (target == null) {
             onNotSelected();
         } else if (target.userData.transformSelectionType == "BoneIk" && this._enabled) {
-            if (this.logging) {
+            if (scope.logging) {
                 console.log("IkController onTransformSelectionChanged");
             }
 
-            // ap.transformControls.setMode("translate");
-            this.setIkTarget(target);
-            // ap.transformControls.attach(target);
+            scope.setIkTarget(target);
 
-            // ap.getSignal("ikSelectionChanged").dispatch(this.getIkNameFromTarget(target));
+            scope.signals._onIkSelectionChanged.dispatch([target, scope.getIkNameFromTarget(target)]);
 
-            if (this.logging) {
-                console.log("IkController dispatch ikSelectionChanged", this.getIkNameFromTarget(target));
+            if (scope.logging) {
+                console.log("IkController dispatch ikSelectionChanged", scope.getIkNameFromTarget(target));
             }
         } else {//other
             onNotSelected();
@@ -394,7 +397,7 @@ export class IKController {
         // ap.getSignal("ikSelectionChanged").add(this.onIkSelectionChanged);
     }
 
-    public onTransformChanged(target: THREE.Mesh) {
+    public onTransformChanged(target: THREE.Object3D) {
         if (target != null && target.userData.transformSelectionType == "BoneIk") {
             if (this.logging) {
                 console.log("IkController onTransformChanged");
@@ -418,7 +421,6 @@ export class IKController {
             //_ikSolved overwrited in solveOtherIkTargets
             this._solving = false;
 
-
             if (solved) {
                 this._ikSolved[this.getIkNameFromTarget(target)] = true;
                 if (this.logging) {
@@ -429,11 +431,10 @@ export class IKController {
                     this.solveOtherIkTargets();
                 }
             }
-
         }
     }
 
-    public onTransformStarted(target: THREE.Mesh) {
+    public onTransformStarted(target: THREE.Object3D) {
         if (target != null && target.userData.transformSelectionType == "BoneIk") {
             if (this.logging) {
                 console.log("IkController onTransformStarted");
@@ -450,7 +451,7 @@ export class IKController {
         }
     }
 
-    public onTransformFinished(target: THREE.Mesh) {
+    public onTransformFinished(target: THREE.Object3D) {
         var scope = this;
         if (target != null && target.userData.transformSelectionType == "BoneIk") {
             if (this.logging) {
@@ -462,12 +463,12 @@ export class IKController {
                 if (scope._ikSolved[key] == true) {
                     var indices = scope.getEffectedBoneIndices(key);
                     indices.forEach(function(index) {
-                        // scope.ap.getSignal("boneRotationChanged").dispatch(index);//really need?
-                        if (this.logging) {
+                        scope.signals._onBoneRotateChanged.dispatch(index);//really need?
+                        if (scope.logging) {
                             console.log("IkController dispatch boneRotationChanged", index);
                         }
-                        // scope.ap.getSignal("boneRotationFinished").dispatch(index);
-                        if (this.logging) {
+                        scope.signals._onBoneRotateFinished.dispatch(index);//really need?
+                        if (scope.logging) {
                             console.log("IkController dispatch boneRotationFinished", index);
                         }
                     });
@@ -478,7 +479,7 @@ export class IKController {
     }
 
     public getEffectedBoneIndices(name: string) {
-        var indices = this.iks[name];
+        var indices = this.iks[name].indices;
 
         var result = [];
         var length = this.isEnableEndSiteByName(name) ? indices.length : indices.length - 1;
@@ -581,7 +582,7 @@ export class IKController {
 
                 //var newQ=IkUtils.calculateAngles(lastJointPos,jointPos,jointRotQ,targetPos,this.maxAngle,false);
 
-                var inverseQ = bone.parent.getWorldQuaternion(new THREE.Quaternion()).inverse();
+                var inverseQ = bone.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
                 if (!(bone.parent instanceof THREE.Bone)) {
                     //root but using skinned mesh quaterrnion,no problem.
                     //inverseQ=new THREE.Quaternion();//no parent;
@@ -636,52 +637,55 @@ export class IKController {
                         return tmp;
                     }
 
-                    if (!this.iks[bone.name]) {
+                    const limitMin = this.ikLimitMin[bone.name];
+                    const limitMax = this.ikLimitMax[bone.name];
+
+                    if (!limitMin) {
                         if (this.logging)
                             console.log("no ikLimitMin", bone.name);
-                    }
+                    } else {
+                        var tmpX = toDegree(x, euler.x);
+                        if (!this.ikLockX && tmpX >= limitMin.x && tmpX <= limitMax.x) {
+                            x = x + euler.x;
+                            //console.log(bone.name,"ok",limitMin.x,limitMax.x,tmpX);
+                        } else {
+                            if (this.debug)
+                                console.log(bone.name, "limit-x", limitMin.x, limitMax.x, tmpX);
+                        }
+                        var tmpY = toDegree(y, euler.y);
+                        if (!this.ikLockY && tmpY >= limitMin.y && tmpY <= limitMax.y) {
+                            y = y + euler.y;
+                        } else {
+                            if (this.debug)
+                                console.log(bone.name, "limit-y", limitMin.y, limitMax.y, tmpY);
+                        }
+                        var tmpZ = toDegree(z, euler.z);
+                        if (!this.ikLockZ && tmpZ >= limitMin.z && tmpZ <= limitMax.z) {
+                            z = z + euler.z;
+                        } else {
+                            if (this.debug)
+                                console.log(bone.name, "limit-z", limitMin.z, limitMax.z, tmpZ);
+                        }
 
-                    var tmpX = toDegree(x, euler.x);
-                    if (!this.ikLockX && tmpX >= this.iks[bone.name].limitMin.x && tmpX <= this.iks[bone.name].limitMax.x) {
-                        x = x + euler.x;
-                        //console.log(bone.name,"ok",this.iks[bone.name].limitMin.x,this.iks[bone.name].limitMax.x,tmpX);
-                    } else {
-                        if (this.debug)
-                            console.log(bone.name, "limit-x", this.iks[bone.name].limitMin.x, this.iks[bone.name].limitMax.x, tmpX);
-                    }
-                    var tmpY = toDegree(y, euler.y);
-                    if (!this.ikLockY && tmpY >= this.iks[bone.name].limitMin.y && tmpY <= this.iks[bone.name].limitMax.y) {
-                        y = y + euler.y;
-                    } else {
-                        if (this.debug)
-                            console.log(bone.name, "limit-y", this.iks[bone.name].limitMin.y, this.iks[bone.name].limitMax.y, tmpY);
-                    }
-                    var tmpZ = toDegree(z, euler.z);
-                    if (!this.ikLockZ && tmpZ >= this.iks[bone.name].limitMin.z && tmpZ <= this.iks[bone.name].limitMax.z) {
-                        z = z + euler.z;
-                    } else {
-                        if (this.debug)
-                            console.log(bone.name, "limit-z", this.iks[bone.name].limitMin.z, this.iks[bone.name].limitMax.z, tmpZ);
-                    }
-
-                    //fix rad
-                    if (x > Math.PI) {
-                        x -= Math.PI * 2;
-                    }
-                    if (y > Math.PI) {
-                        y -= Math.PI * 2;
-                    }
-                    if (z > Math.PI) {
-                        z -= Math.PI * 2;
-                    }
-                    if (x < -Math.PI) {
-                        x += Math.PI * 2;
-                    }
-                    if (y < -Math.PI) {
-                        y += Math.PI * 2;
-                    }
-                    if (z < -Math.PI) {
-                        z += Math.PI * 2;
+                        //fix rad
+                        if (x > Math.PI) {
+                            x -= Math.PI * 2;
+                        }
+                        if (y > Math.PI) {
+                            y -= Math.PI * 2;
+                        }
+                        if (z > Math.PI) {
+                            z -= Math.PI * 2;
+                        }
+                        if (x < -Math.PI) {
+                            x += Math.PI * 2;
+                        }
+                        if (y < -Math.PI) {
+                            y += Math.PI * 2;
+                        }
+                        if (z < -Math.PI) {
+                            z += Math.PI * 2;
+                        }
                     }
                 } else {
                     if (this.logging) {
@@ -695,8 +699,6 @@ export class IKController {
                 bone.rotation.set(x, y, z);
 
                 //bone.quaternion.multiply(newQ); //somehow not stable
-
-                this.boneAttachController.update();
             }
         }
 

@@ -6,6 +6,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { VRM, VRMSchema } from '@pixiv/three-vrm';
 import { Signals } from "./Signals";
 import { IKModel } from "./IKModel";
+import { TransformHandler } from "./TransformHandler";
 
 export class IKPose {
     public renderer: THREE.WebGLRenderer;
@@ -13,7 +14,8 @@ export class IKPose {
     public scene: THREE.Scene;
     public signals: Signals;
 
-    public transformControl: TransformControls;
+    public controls: OrbitControls;
+    public transformHandler: TransformHandler;
 
     private ikModels: Array<IKModel> = [];
 
@@ -82,21 +84,21 @@ export class IKPose {
     }
 
     private bindControls() {
+        var scope = this;
+
         // Controls
-        const controls = new OrbitControls(this.camera, this.renderer.domElement);
+        this.controls = new OrbitControls(this.camera, this.renderer.domElement);
         // controls.damping = 0.2;
-        controls.addEventListener('change', () => this.render());
+        this.controls.addEventListener('change', () => scope.render());
 
-        this.transformControl = new TransformControls(this.camera, this.renderer.domElement);
-        this.transformControl.addEventListener('change', () => this.render());
-        this.transformControl.addEventListener('dragging-changed', function(event) {
-            controls.enabled = !event.value;
-        });
-        this.scene.add(this.transformControl);
+        this.transformHandler = new TransformHandler(this.signals, this);
 
-        document.addEventListener('pointerdown', this.onPointerDown);
-        document.addEventListener('pointerup', this.onPointerUp);
-        document.addEventListener('pointermove', this.onPointerMove);
+        this.signals.onIkSelectionChanged.subscribe((target: [THREE.Object3D, string]) => {
+            if (target) {
+                scope.transformHandler.setTarget(target[0]);
+            }
+            scope.render();
+        })
     }
 
     private openGUI() {
@@ -106,17 +108,13 @@ export class IKPose {
         gui.open();
     }
 
-    private onPointerDown(event: PointerEvent) {
-    }
-
-    private onPointerUp(event: PointerEvent) {
-    }
-
-    private onPointerMove(event: PointerEvent) {
-    }
-
-    private render() {
+    public render() {
+        this.update(0);
         this.renderer.render(this.scene, this.camera);
+    }
+
+    public update(delta: number) {
+        // this.ikModels.forEach((model) => model.update(delta));
     }
 
     public loadModel(url: string) {
@@ -145,5 +143,10 @@ export class IKPose {
 
     private onModelLoadError(error: ErrorEvent) {
         console.error(error)
+    }
+
+    public getIkTargets(): THREE.Mesh[] {
+        const result = this.ikModels.map((model) => model.ikController.getIkTargetsValue());
+        return [].concat.apply([], result);
     }
 }

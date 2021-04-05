@@ -87,7 +87,7 @@ export class BoneAttachController {
         var matrix = this.defaultBoneMatrixs[index];
         var position = new THREE.Vector3();
 
-        this._matrixWorldInv.getInverse(this.object3d.matrixWorld);
+        this._matrixWorldInv.copy(this.object3d.matrixWorld).invert();
         this._boneMatrix.multiplyMatrices(this._matrixWorldInv, matrix);
         position.setFromMatrixPosition(this._boneMatrix);
 
@@ -136,7 +136,7 @@ export class BoneAttachController {
             this.root.updateMatrixWorld(true);
         }
 
-        this._matrixWorldInv.getInverse(this.object3d.matrixWorld);
+        this._matrixWorldInv.copy(this.object3d.matrixWorld).invert();
         this.object3d.getWorldQuaternion(this._quaternion);
 
         for (var i = 0; i < this.boneList.length; i++) {
