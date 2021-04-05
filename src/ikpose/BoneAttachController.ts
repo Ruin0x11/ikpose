@@ -1,0 +1,217 @@
+import { SimpleEventDispatcher } from "strongly-typed-events";
+import * as THREE from "three";
+import * as BoneUtils from "./BoneUtils";
+
+export class BoneAttachController {
+    private boneList: THREE.Bone[];
+
+    private parentIndexs: any = {};
+    private containerList: Array<THREE.Mesh> = [];
+    private updateAll: boolean = true;
+    private object3d: THREE.Group;
+    private defaultBoneMatrixs: Array<any> = [];
+
+    private visible: boolean = true;
+
+    private _boneMatrix: THREE.Matrix4;
+    private _matrixWorldInv: THREE.Matrix4;
+    private _quaternion: THREE.Quaternion;
+    private boundingBox: THREE.Box3;
+
+    constructor(private readonly root: THREE.Group, color: number = 0x880000, boxSize: number = 2, visible: boolean = false) {
+        var material = { color: color, depthTest: false, transparent: true, opacity: .9 };
+
+        this.root = root;
+        root.updateMatrixWorld(true);
+        this.boneList = BoneUtils.getBoneList(root);
+        console.log("BONES", this.boneList);
+
+        this.object3d = new THREE.Group();
+
+        this.defaultBoneMatrixs = [];
+
+        var scope = this;
+        this.boneList.forEach(function(bone: THREE.Bone) {
+            var name = bone.name;
+            var list = [];
+            while (bone && bone instanceof THREE.Bone) {
+                list.push(bone);
+                bone = bone.parent as THREE.Bone;
+            }
+            scope.parentIndexs[name] = list;
+            var container = new THREE.Mesh(new THREE.BoxGeometry(boxSize, boxSize, boxSize), new THREE.MeshPhongMaterial(material));
+            container.name = "bac-" + name;
+            container.renderOrder = 1;
+            scope.containerList.push(container);
+            container.userData.bone = list[0];
+            scope.object3d.add(container);
+            //container.matrixAutoUpdate=false;
+        });
+
+        //default hide all
+        this.setVisible(this.visible);
+
+
+        this._boneMatrix = new THREE.Matrix4();
+        this._matrixWorldInv = new THREE.Matrix4();
+        this._quaternion = new THREE.Quaternion();
+
+        this.update();
+
+        this.boneList.forEach(function(bone) {
+            scope.defaultBoneMatrixs.push(bone.matrixWorld.clone());
+        });
+    };
+
+    setParentObject(parent: THREE.Object3D) {
+        parent.add(this.object3d);
+    }
+
+    dispose() {
+        var object3d = this.object3d;
+        if (object3d.parent != null) {
+            object3d.parent.remove(object3d);
+        }
+    }
+
+    getBoneList() {
+        return this.boneList;
+    }
+    clonePositionAt(index: number) {
+        return this.containerList[index].position.clone();
+    }
+    getContainerList(): Array<THREE.Mesh> {
+        return this.containerList;
+    }
+    getDefaultBonePosition(index: number) {
+        var matrix = this.defaultBoneMatrixs[index];
+        var position = new THREE.Vector3();
+
+        this._matrixWorldInv.getInverse(this.object3d.matrixWorld);
+        this._boneMatrix.multiplyMatrices(this._matrixWorldInv, matrix);
+        position.setFromMatrixPosition(this._boneMatrix);
+
+        return position;
+    }
+    getBoneIndexByBoneName(name: string) {
+        var index = -1;
+        for (var i = 0; i < this.boneList.length; i++) {
+            if (this.boneList[i].name == name) {
+                index = i;
+                break;
+            }
+        }
+        return index;
+    }
+    getContainerByBoneIndex(index: number) {
+        if (index < 0) {
+            console.log("BoneAttachControler.getContainerByBoneIndex:index must be 0 or greater," + index);
+            return null;
+        }
+        return this.containerList[index];
+    }
+
+    getContainerByBoneName(name: string) {
+        var index = this.getBoneIndexByBoneName(name);
+        if (index == -1) {
+            console.log("BoneAttachControler.getContainerByBoneName:not containe," + name);
+            return null;
+        }
+        return this.containerList[index];
+    }
+
+    getContainerByBoneEndName(name: string) {
+        var index = BoneUtils.findBoneIndexByEndsName(this.boneList, name);
+        if (index == -1) {
+            console.log("BoneAttachControler.getContainerByBoneName:not containe," + name);
+            return null;
+        }
+        return this.containerList[index];
+    }
+
+
+    //if delay frame call ap.skinnedMesh.updateMatrixWorld(true);
+    update(forceUpdateMatrixWorld: boolean = false) {
+        if (forceUpdateMatrixWorld) {
+            this.root.updateMatrixWorld(true);
+        }
+
+        this._matrixWorldInv.getInverse(this.object3d.matrixWorld);
+        this.object3d.getWorldQuaternion(this._quaternion);
+
+        for (var i = 0; i < this.boneList.length; i++) {
+            let cube = this.containerList[i];
+            let bone = this.boneList[i];
+            if (!this.updateAll && cube.children.length == 0) {
+                continue;
+            }
+            bone.updateMatrixWorld(true);//without update, deley few frame position
+
+            this._boneMatrix.multiplyMatrices(this._matrixWorldInv, bone.matrixWorld);
+            cube.position.setFromMatrixPosition(this._boneMatrix);
+
+            //Only This one OK!
+            bone.getWorldQuaternion(cube.quaternion);
+            cube.quaternion.multiply(this._quaternion);
+            cube.updateMatrixWorld(true);//for attach
+        }
+    }
+
+    setVisible(visible: boolean) {
+        this.containerList.forEach(function(container) {
+            (container.material as THREE.Material).visible = visible;
+        });
+    }
+    setVisibleAll(visible) {
+        this.containerList.forEach(function(container) {
+            container.traverse(function(obj) {
+                if (obj instanceof THREE.Mesh && obj.material instanceof THREE.Material) {
+                    obj.material.visible = visible;
+                }
+            });
+
+        });
+    }
+
+    computeBoundingBox() {
+        if (this.containerList.length < 2) {
+            console.log("computeBoundingBox need at least 2 bone");
+            return;
+        }
+
+        var startIndex = 1;
+        if (this.containerList[1].name == "bac-Global") {
+            startIndex = 2;
+        }
+        if (this.containerList.length > 2 && this.containerList[2].name == "bac-Position")
+            startIndex = 3;
+
+        //ignore root
+        var pos = this.containerList[3].position;
+        var minX = pos.x;
+        var minY = pos.y;
+        var minZ = pos.z;
+        var maxX = pos.x;
+        var maxY = pos.y;
+        var maxZ = pos.z;
+        for (var i = startIndex + 1; i < this.containerList.length; i++) {
+            pos = this.containerList[i].position;
+            if (pos.x < minX) minX = pos.x;
+            if (pos.y < minY) { minY = pos.y; }
+            if (pos.z < minZ) minZ = pos.z;
+            if (pos.x > maxX) maxX = pos.x;
+            if (pos.y > maxY) maxY = pos.y;
+            if (pos.z > maxZ) maxZ = pos.z;
+        }
+        var minBox = new THREE.Vector3(minX, minY, minZ);
+        var maxBox = new THREE.Vector3(maxX, maxY, maxZ);
+        this.boundingBox = new THREE.Box3(minBox, maxBox);
+    }
+
+    setAllScale(scale) {
+        this.containerList.forEach(function(container) {
+            container.scale.setScalar(scale);
+        });
+
+    }
+}

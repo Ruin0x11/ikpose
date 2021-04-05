@@ -5,13 +5,12 @@ const common = require("./webpack.config.common")
 
 module.exports = merge(common, {
     mode: "development",
-    devtool: "inline-source-map",
+    devtool: "source-map",
     devServer: {
         contentBase: path.resolve(__dirname, "./dist"),
         compress: true,
         port: 9000,
-        inline: true,
-      mimeTypes: { 'application/json': ['babylon'] },
+        mimeTypes: { 'application/json': ['babylon'] },
     },
     stats: {
       logging: 'verbose',

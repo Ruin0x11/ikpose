@@ -4,13 +4,18 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { VRM, VRMSchema } from '@pixiv/three-vrm';
+import { Signals } from "./Signals";
+import { IKModel } from "./IKModel";
 
 export class IKPose {
     public renderer: THREE.WebGLRenderer;
     public camera: THREE.PerspectiveCamera;
     public scene: THREE.Scene;
+    public signals: Signals;
 
     public transformControl: TransformControls;
+
+    private ikModels: Array<IKModel> = [];
 
     public params: any = {
         uniform: false
@@ -28,6 +33,8 @@ export class IKPose {
         this.camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 10000);
         this.camera.position.set(0.0, 2.5, 1.5);
         this.scene.add(this.camera);
+
+        this.signals = new Signals();
 
         this.addLight();
         this.addPlane();
@@ -122,8 +129,11 @@ export class IKPose {
     }
 
     private onModelLoadSuccess(vrm: VRM) {
-        this.scene.add(vrm.scene);
-        vrm.humanoid.getBoneNode(VRMSchema.HumanoidBoneName.Hips).rotation.y = Math.PI;
+        const ikModel = new IKModel(this.signals, vrm)
+        this.ikModels.push(ikModel);
+        ikModel.vrm.humanoid.getBoneNode(VRMSchema.HumanoidBoneName.Hips).rotation.y = Math.PI;
+        ikModel.ikController.setVisible(true);
+        ikModel.addToScene(this.scene);
 
         console.log(vrm);
         this.render();
