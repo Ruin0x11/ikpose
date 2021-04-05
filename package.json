@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@pixiv/three-vrm": "^0.6.2",
     "@types/three": "^0.127.0",
     "copy-webpack-plugin": "^8.1.0",
     "handlebars": "^4.7.7",
@@ -26,6 +27,6 @@
   },
   "dependencies": {
     "dat.gui": "^0.7.7",
-    "three": "^0.127.0"
+    "three": "^0.125.0"
   }
 }

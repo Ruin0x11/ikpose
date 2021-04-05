@@ -2,6 +2,8 @@ import * as THREE from "three";
 import * as dat from "dat.gui";
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { VRM, VRMSchema } from '@pixiv/three-vrm';
 
 export class IKPose {
     public renderer: THREE.WebGLRenderer;
@@ -15,17 +17,16 @@ export class IKPose {
     };
 
     constructor() {
-        this.renderer = new THREE.WebGLRenderer();
+        this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.shadowMap.enabled = true
         document.body.appendChild(this.renderer.domElement);
 
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0xf0f0f0);
 
         this.camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 10000);
-        this.camera.position.set(0, 250, 1000);
+        this.camera.position.set(0.0, 2.5, 1.5);
         this.scene.add(this.camera);
 
         this.addLight();
@@ -59,14 +60,14 @@ export class IKPose {
         const planeMaterial = new THREE.ShadowMaterial({ opacity: 0.2 });
 
         const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-        plane.position.y = - 200;
+        plane.position.y = -1;
         plane.receiveShadow = true;
         this.scene.add(plane);
     }
 
     private addGrid() {
-        const helper = new THREE.GridHelper(2000, 100);
-        helper.position.y = -199;
+        const helper = new THREE.GridHelper(50, 100);
+        helper.position.y = 0;
         const material: THREE.Material = helper.material as THREE.Material
         material.opacity = 0.25;
         material.transparent = true;
@@ -109,5 +110,30 @@ export class IKPose {
 
     private render() {
         this.renderer.render(this.scene, this.camera);
+    }
+
+    public loadModel(url: string) {
+        const loader = new GLTFLoader();
+        loader.load(url,
+            (gltf) => VRM.from(gltf).then((vrm) => this.onModelLoadSuccess(vrm)),
+            (progress) => this.onModelLoadProgress(progress),
+            (error) => this.onModelLoadError(error)
+        );
+    }
+
+    private onModelLoadSuccess(vrm: VRM) {
+        this.scene.add(vrm.scene);
+        vrm.humanoid.getBoneNode(VRMSchema.HumanoidBoneName.Hips).rotation.y = Math.PI;
+
+        console.log(vrm);
+        this.render();
+    }
+
+    private onModelLoadProgress(progress: any) {
+        console.log('Loading model...', 100.0 * (progress.loaded / progress.total), '%')
+    }
+
+    private onModelLoadError(error: ErrorEvent) {
+        console.error(error)
     }
 }
