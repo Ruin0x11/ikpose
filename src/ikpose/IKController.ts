@@ -431,6 +431,8 @@ export class IKController {
                     this.solveOtherIkTargets();
                 }
             }
+
+            this.boneAttachController.update();
         }
     }
 
@@ -699,6 +701,9 @@ export class IKController {
                 bone.rotation.set(x, y, z);
 
                 //bone.quaternion.multiply(newQ); //somehow not stable
+            }
+            for (var i = ikIndicesLength; i >= 0; i--) {
+                this.boneAttachController.updateOne(ikIndices[i])
             }
         }
 

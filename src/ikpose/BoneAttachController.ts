@@ -129,6 +129,22 @@ export class BoneAttachController {
         return this.containerList[index];
     }
 
+    updateOne(i: number) {
+        let cube = this.containerList[i];
+        let bone = this.boneList[i];
+        if (!this.updateAll && cube.children.length == 0) {
+            return
+        }
+        bone.updateMatrixWorld(true);//without update, deley few frame position
+
+        this._boneMatrix.multiplyMatrices(this._matrixWorldInv, bone.matrixWorld);
+        cube.position.setFromMatrixPosition(this._boneMatrix);
+
+        //Only This one OK!
+        bone.getWorldQuaternion(cube.quaternion);
+        cube.quaternion.multiply(this._quaternion);
+        cube.updateMatrixWorld(true);//for attach
+    }
 
     //if delay frame call ap.skinnedMesh.updateMatrixWorld(true);
     update(forceUpdateMatrixWorld: boolean = false) {
@@ -140,20 +156,7 @@ export class BoneAttachController {
         this.object3d.getWorldQuaternion(this._quaternion);
 
         for (var i = 0; i < this.boneList.length; i++) {
-            let cube = this.containerList[i];
-            let bone = this.boneList[i];
-            if (!this.updateAll && cube.children.length == 0) {
-                continue;
-            }
-            bone.updateMatrixWorld(true);//without update, deley few frame position
-
-            this._boneMatrix.multiplyMatrices(this._matrixWorldInv, bone.matrixWorld);
-            cube.position.setFromMatrixPosition(this._boneMatrix);
-
-            //Only This one OK!
-            bone.getWorldQuaternion(cube.quaternion);
-            cube.quaternion.multiply(this._quaternion);
-            cube.updateMatrixWorld(true);//for attach
+            this.updateOne(i);
         }
     }
 
