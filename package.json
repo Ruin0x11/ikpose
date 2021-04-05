@@ -1,5 +1,5 @@
 {
-  "name": "babylonjs-typescript-starter",
+  "name": "3dpose",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@babylonjs/core": "4.2.0",
-    "@babylonjs/loaders": "4.2.0"
+    "@babylonjs/loaders": "4.2.0",
+    "dat.gui": "^0.7.7"
   }
 }
