@@ -1,16 +1,19 @@
+import "@babylonjs/core/Loading/loadingScreen";
+import "@babylonjs/loaders";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera"
 import { Engine } from "@babylonjs/core/Engines/engine"
-import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight"
-import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder"
-import { Scene } from "@babylonjs/core/scene"
 import { Vector3 } from "@babylonjs/core/Maths/math.vector"
 
-import { SampleMaterial } from "./Materials/SampleMaterial"
+import { PoserScene } from "./PoserScene"
+import { IKModel } from "./IKModel"
 
 const view = document.getElementById("view") as HTMLCanvasElement
 const engine = new Engine(view, true)
 
-const scene = new Scene(engine)
+import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
+console.log(SceneLoader.IsPluginForExtensionAvailable(".babylon"))
+
+const scene = new PoserScene(engine)
 
 const camera = new ArcRotateCamera(
     "camera",
@@ -22,16 +25,12 @@ const camera = new ArcRotateCamera(
 
 camera.attachControl(view)
 
-const light = new HemisphericLight(
-    "light",
-    new Vector3(0, 1, 0),
-    scene)
-
-const mesh = MeshBuilder.CreateGround("mesh", {}, scene)
-
-const material =  new SampleMaterial("material", scene)
-mesh.material = material
+const model = new IKModel("assets/models/", "Dude.babylon", scene);
 
 engine.runRenderLoop(() => {
     scene.render();
 })
+
+window.addEventListener("resize", function() {
+    engine.resize();
+});

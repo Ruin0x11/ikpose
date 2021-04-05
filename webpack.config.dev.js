@@ -10,5 +10,9 @@ module.exports = merge(common, {
         contentBase: path.resolve(__dirname, "./dist"),
         compress: true,
         port: 9000,
+        inline: true
+    },
+    stats: {
+      logging: 'verbose',
     },
 })
