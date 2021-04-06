@@ -49,11 +49,14 @@ export class TransformHandler {
             let target = pair[1]
             if (scope.target && scope.target.userData.transformSelectionType == "Joint") {
                 scope.target.visible = false
+                scope.target.userData.isSelected = false
             }
 
             scope.target = target;
             if (target == null) {
                 scope.control.detach();
+            } else {
+                scope.target.userData.isSelected = true
             }
         }); //, undefined, 100);//do first
 
@@ -70,8 +73,6 @@ export class TransformHandler {
     }
 
     public setTarget(target: THREE.Object3D) {
-        this.control.setMode("translate");
-
         let realTarget = target
         if (target && target.userData.transformSelectionType == "Joint") {
             // Target the parent bone
@@ -103,6 +104,8 @@ export class TransformHandler {
         this.handleClick();
 
         this.signals._onTransformFinished.dispatch(this.target);
+
+        this.ikpose.render()
     }
 
     private onPointerDown(event: PointerEvent) {
@@ -112,6 +115,8 @@ export class TransformHandler {
         this.onDownPosition.fromArray(array);
 
         this.signals._onTransformStarted.dispatch(this.target);
+
+        this.ikpose.render()
     }
 
     private onPointerMove(event: PointerEvent) {

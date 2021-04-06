@@ -48,17 +48,23 @@ export class JointController {
             const limitMin = this.ikController.ikLimitMin[bone.name];
             const limitMax = this.ikController.ikLimitMax[bone.name];
 
-            control.setMode("rotate")
-            if (limitMin) {
-                control.showX = limitMin.x < limitMax.x
-                control.showY = limitMin.y < limitMax.y
-                control.showZ = limitMin.z < limitMax.z
-            } else {
+            if (target.userData.isSelected && control.getMode() == "rotate" && target.userData.canTranslate) {
+                control.setMode("translate")
                 control.showX = true
                 control.showY = true
                 control.showZ = true
+            } else {
+                control.setMode("rotate")
+                if (limitMin) {
+                    control.showX = limitMin.x < limitMax.x
+                    control.showY = limitMin.y < limitMax.y
+                    control.showZ = limitMin.z < limitMax.z
+                } else {
+                    control.showX = true
+                    control.showY = true
+                    control.showZ = true
+                }
             }
-
         } else {//other
             this.clearJointTarget();
         }

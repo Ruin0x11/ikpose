@@ -45,6 +45,7 @@ export class BoneAttachController {
             container.userData.transformSelectionType = "Joint";
             container.userData.bone = list[0];
             container.userData.isTargetable = false;
+            container.userData.canTranslate = false;
             container.userData.ikPosition = new THREE.Vector3();
             scope.containerList.push(container);
             // scope.object3d.add(container);
@@ -76,6 +77,11 @@ export class BoneAttachController {
         if (object3d.parent != null) {
             object3d.parent.remove(object3d);
         }
+    }
+
+    setCanTranslate(boneName: string, enabled: boolean) {
+        let index = this.getBoneIndexByBoneName(boneName);
+        this.containerList[index].userData.canTranslate = enabled
     }
 
     targetBones(boneNames: Set<string>, target: boolean) {

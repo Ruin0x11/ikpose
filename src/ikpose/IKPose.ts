@@ -20,7 +20,7 @@ export class IKPose {
     private ikModels: Array<IKModel> = [];
 
     public params: any = {
-        showIk: false
+        showIk: true
     };
 
     constructor() {

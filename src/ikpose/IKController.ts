@@ -525,6 +525,8 @@ export class IKController {
                     });
                 }
             });
+
+            this.resetAllIkTargets();
         }
     }
 

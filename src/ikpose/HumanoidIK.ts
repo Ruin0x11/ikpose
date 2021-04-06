@@ -82,8 +82,11 @@ export class HumanoidIK implements IIKSettings {
         this.hipBoneNames = resolveMapBoneName([BoneName.Hips, BoneName.Spine]);
         if (this.hipBoneNames.length > 1) {
             this.registIk(this.ikTargets, "Hip", this.hipBoneNames);
-        }
 
+            for (let name of this.hipBoneNames) {
+                this.boneAttachController.setCanTranslate(name, true)
+            }
+        }
 
         /*//this.registIk(this.ikTargets,"Hip",["root","spine01"]);//
           this.registIk(this.ikTargets,"Hip",["pelvis","spine01"]);//
@@ -96,7 +99,6 @@ export class HumanoidIK implements IIKSettings {
           this.registIk(this.ikTargets,"hip",["thigh_R","calf_R","foot_R"]);*/
 
         this.initlimitBone();
-
     }
 
     registIk(ikTargets: any, ikName: string, jointNames: Array<string>) {
