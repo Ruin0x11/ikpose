@@ -287,20 +287,20 @@ export class IKController {
     }
 
     updateIkTargets() {
-        this._matrixWorldInv.copy(this.object3d.matrixWorld).invert();
-        this.object3d.getWorldQuaternion(this._quaternion);
+        // this._matrixWorldInv.copy(this.object3d.matrixWorld).invert();
+        // this.object3d.getWorldQuaternion(this._quaternion);
 
-        this.boneAttachController.updateMatrix();
-        for (let name in this.iks) {
-            var ik = this.iks[name];
-            var index = ik.indices[ik.indices.length - 1];
-            var cube = this.boneAttachController.getContainerList()[index];
-            let target = ik.target
+        // this.boneAttachController.updateMatrix();
+        // for (let name in this.iks) {
+        //     var ik = this.iks[name];
+        //     var index = ik.indices[ik.indices.length - 1];
+        //     var cube = this.boneAttachController.getContainerList()[index];
+        //     let target = ik.target
 
-            target.position.copy(cube.position)
+        //     target.position.copy(cube.position)
 
-            this.boneAttachController.updateOne(index);
-        }
+        //     this.boneAttachController.updateOne(index);
+        // }
     }
 
     public resetAllIkTargets(exclude: string = null) {

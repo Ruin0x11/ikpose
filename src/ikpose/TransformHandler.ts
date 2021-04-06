@@ -49,6 +49,7 @@ export class TransformHandler {
             if (scope.target && scope.target.userData.transformSelectionType == "Joint") {
                 scope.target.visible = false
             }
+
             scope.target = target;
             if (target == null) {
                 scope.control.detach();
@@ -70,7 +71,13 @@ export class TransformHandler {
 
     public setTarget(target: THREE.Object3D) {
         this.control.setMode("translate");
-        this.control.attach(target);
+
+        let realTarget = target
+        if (target && target.userData.transformSelectionType == "Joint") {
+            // Target the parent bone
+            realTarget = target.parent
+        }
+        this.control.attach(realTarget);
     }
 
     private getIntersects(point: THREE.Vector2, objects: THREE.Object3D[]) {

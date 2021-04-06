@@ -56,7 +56,26 @@ export class JointController {
             const limitMin = this.ikController.ikLimitMin[bone.name];
             const limitMax = this.ikController.ikLimitMax[bone.name];
 
-            let r = target.rotation
+            // let r = target.rotation
+            // console.log("WORLD", target.rotation)
+            // console.log("BONE", bone.rotation)
+
+            let newR = new THREE.Quaternion()
+            newR.copy(target.quaternion)
+
+            let q = new THREE.Quaternion();
+            this.boneAttachController.object3d.getWorldQuaternion(q)
+            q.invert()
+            let q2 = new THREE.Quaternion();
+            bone.getWorldQuaternion(q2);
+            q2.invert()
+
+            newR.multiply(q)
+            newR.multiply(q2)
+
+            let r = newR;
+
+            // console.log("WORLD IN BONE", r)
 
             let x = r.x
             let y = r.y
@@ -95,13 +114,22 @@ export class JointController {
                 // console.log("LIMIT", r)
             }
 
-            target.rotation.set(x, y, z)
+            // r.x = x
+            // r.y = y
+            // r.z = z
+
+            bone.getWorldQuaternion(q2);
+            r.multiply(q2)
+            this.boneAttachController.object3d.getWorldQuaternion(q);
+            r.multiply(q)
+
+            // target.setRotationFromQuaternion(r)
         }
     }
 
     public onTransformRotateChanged(pair: [TransformControls, THREE.Object3D]) {
-        if (pair != null && pair[1].userData.transformSelectionType == "Joint" && pair[1].userData.isTargetable) {
-            let target = pair[1]
+        if (pair != null && pair[1] instanceof THREE.Bone) {
+            let bone: THREE.Bone = pair[1]
             if (this.logging) {
                 console.log("JointController onTransformChanged");
             }
@@ -113,13 +141,23 @@ export class JointController {
                 return;
             }
 
-            let bone: THREE.Bone = target.userData.bone
+            // let bone: THREE.Bone = target.userData.bone
 
-            var r = target.rotation;
+            // var r = target.rotation;
 
-            // bone.rotation.y = y
-            // target.rotation.y = y
-            bone.rotation.set(r.x, r.y, r.z)
+            // console.log("WORLD", bone.getWorldQuaternion(new THREE.Quaternion()))
+            // let r = target.quaternion;
+            // console.log("TARGET", r)
+
+            // // bone.rotation.y = y
+            // // target.rotation.y = y
+            // console.log("BEF", bone.quaternion)
+            // bone.setRotationFromQuaternion(r)
+            // target.updateMatrixWorld(true);
+            // bone.updateMatrixWorld(true);
+            // console.log("AF", bone.quaternion)
+            // bone.updateMatrixWorld(true);
+            // target.updateMatrixWorld(true)
             // pair[0].rotation.set(x, y, z)
             // this.boneAttachController.update()
         }

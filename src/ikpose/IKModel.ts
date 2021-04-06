@@ -56,10 +56,13 @@ export class IKModel {
     }
 
     addToScene(scene: THREE.Scene) {
+        this.vrm.scene.add(this.ikController.object3d)
+        this.vrm.scene.add(this.boneAttachController.object3d);
         scene.add(this.vrm.scene);
 
-        scene.add(this.ikController.object3d)
-        scene.add(this.boneAttachController.object3d);
+        // this.vrm.scene.rotation.z = Math.PI / 2.24
+        // this.vrm.scene.rotation.y = -Math.PI / 2.24
+        // this.vrm.scene.rotation.x = Math.PI / 1.24
     }
 
     update(delta: number) {
