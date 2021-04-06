@@ -41,10 +41,11 @@ export class BoneAttachController {
             var container = new THREE.Mesh(new THREE.BoxGeometry(boxSize, boxSize, boxSize), new THREE.MeshPhongMaterial(material));
             container.name = "bac-" + name;
             container.renderOrder = 1;
-            container.visible = true;
+            container.visible = false;
             container.userData.transformSelectionType = "Joint";
             container.userData.bone = list[0];
             container.userData.isTargetable = false;
+            container.userData.ikPosition = new THREE.Vector3();
             scope.containerList.push(container);
             // scope.object3d.add(container);
             list[0].add(container)
@@ -154,8 +155,8 @@ export class BoneAttachController {
 
         bone.updateMatrixWorld(true);//without update, deley few frame position
 
-        // this._boneMatrix.multiplyMatrices(this._matrixWorldInv, bone.matrixWorld);
-        // cube.position.setFromMatrixPosition(this._boneMatrix);
+        this._boneMatrix.multiplyMatrices(this._matrixWorldInv, bone.matrixWorld);
+        cube.userData.ikPosition.setFromMatrixPosition(this._boneMatrix);
 
         // //Only This one OK!
         // bone.getWorldQuaternion(cube.quaternion);

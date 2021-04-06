@@ -31,17 +31,34 @@ export class JointController {
         this.setJointTarget(null);
     }
 
-    public onTransformSelectionChanged(target: THREE.Object3D) {
+    public onTransformSelectionChanged(pair: [TransformControls, THREE.Object3D]) {
         var scope = this;
 
-        if (target == null) {
+        if (pair == null) {
             this.clearJointTarget();
-        } else if (target.userData.transformSelectionType == "Joint" && target.userData.isTargetable && this._enabled) {
+        } else if (pair[1] && pair[1].userData.transformSelectionType == "Joint" && pair[1].userData.isTargetable && this._enabled) {
             if (scope.logging) {
                 console.log("JointController onTransformSelectionChanged");
             }
-
+            let control = pair[0]
+            let target = pair[1]
             scope.setJointTarget(target);
+
+            let bone: THREE.Bone = target.userData.bone
+            const limitMin = this.ikController.ikLimitMin[bone.name];
+            const limitMax = this.ikController.ikLimitMax[bone.name];
+
+            control.setMode("rotate")
+            if (limitMin) {
+                control.showX = limitMin.x < limitMax.x
+                control.showY = limitMin.y < limitMax.y
+                control.showZ = limitMin.z < limitMax.z
+            } else {
+                control.showX = true
+                control.showY = true
+                control.showZ = true
+            }
+
         } else {//other
             this.clearJointTarget();
         }
@@ -49,33 +66,13 @@ export class JointController {
 
     public onTransformChanged(pair: [TransformControls, THREE.Object3D]) {
         if (pair != null && pair[1].userData.transformSelectionType == "Joint" && pair[1].userData.isTargetable) {
-            let target = pair[1]
-
+            let target = pair[1];
             let bone: THREE.Bone = target.userData.bone
 
             const limitMin = this.ikController.ikLimitMin[bone.name];
             const limitMax = this.ikController.ikLimitMax[bone.name];
 
-            // let r = target.rotation
-            // console.log("WORLD", target.rotation)
-            // console.log("BONE", bone.rotation)
-
-            let newR = new THREE.Quaternion()
-            newR.copy(target.quaternion)
-
-            let q = new THREE.Quaternion();
-            this.boneAttachController.object3d.getWorldQuaternion(q)
-            q.invert()
-            let q2 = new THREE.Quaternion();
-            bone.getWorldQuaternion(q2);
-            q2.invert()
-
-            newR.multiply(q)
-            newR.multiply(q2)
-
-            let r = newR;
-
-            // console.log("WORLD IN BONE", r)
+            var r = bone.rotation;
 
             let x = r.x
             let y = r.y
@@ -88,48 +85,18 @@ export class JointController {
                 var maxY = THREE.MathUtils.degToRad(limitMax.y);
                 var minZ = THREE.MathUtils.degToRad(limitMin.z);
                 var maxZ = THREE.MathUtils.degToRad(limitMax.z);
-                x = Math.max(Math.min(x, maxX), minX)
-                y = Math.max(Math.min(y, maxY), minY)
-                z = Math.max(Math.min(z, maxZ), minZ)
-
-                // if (r.x > Math.PI) {
-                //     r.x -= Math.PI * 2;
-                // }
-                // if (r.y > Math.PI) {
-                //     r.y -= Math.PI * 2;
-                // }
-                // if (r.z > Math.PI) {
-                //     r.z -= Math.PI * 2;
-                // }
-                // if (r.x < -Math.PI) {
-                //     r.x += Math.PI * 2;
-                // }
-                // if (r.y < -Math.PI) {
-                //     r.y += Math.PI * 2;
-                // }
-                // if (r.z < -Math.PI) {
-                //     r.z += Math.PI * 2;
-                // }
-
-                // console.log("LIMIT", r)
+                x = Math.min(Math.max(x, minX), maxX)
+                y = Math.min(Math.max(y, minY), maxY)
+                z = Math.min(Math.max(z, minZ), maxZ)
             }
 
-            // r.x = x
-            // r.y = y
-            // r.z = z
-
-            bone.getWorldQuaternion(q2);
-            r.multiply(q2)
-            this.boneAttachController.object3d.getWorldQuaternion(q);
-            r.multiply(q)
-
-            // target.setRotationFromQuaternion(r)
+            bone.rotation.set(x, y, z)
         }
     }
 
     public onTransformRotateChanged(pair: [TransformControls, THREE.Object3D]) {
-        if (pair != null && pair[1] instanceof THREE.Bone) {
-            let bone: THREE.Bone = pair[1]
+        if (pair != null && pair[1].userData.transformSelectionType == "Joint" && pair[1].userData.isTargetable) {
+            let target = pair[1]
             if (this.logging) {
                 console.log("JointController onTransformChanged");
             }
@@ -140,6 +107,8 @@ export class JointController {
                 }
                 return;
             }
+
+            // bone.setRotationFromQuaternion(r)
 
             // let bone: THREE.Bone = target.userData.bone
 

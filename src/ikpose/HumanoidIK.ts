@@ -157,7 +157,7 @@ export class HumanoidIK implements IIKSettings {
         //ikBox.position.copy(ap.ikControler.boneAttachControler.containerList[indices[indices.length-1]].position);
         ikBox.userData.ikName = ikName;//TODO move userData
         ikBox.userData.transformSelectionType = "BoneIk";
-        // this.ikController.addTarget(ikBox);//TODO do at init for switch
+        this.ikController.addTarget(ikBox);//TODO do at init for switch
         this.ikController.iks[ikName].target = ikBox;
 
         this.boneAttachController.targetBones(new Set(jointNames), true)

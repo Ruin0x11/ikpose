@@ -287,20 +287,21 @@ export class IKController {
     }
 
     updateIkTargets() {
-        // this._matrixWorldInv.copy(this.object3d.matrixWorld).invert();
-        // this.object3d.getWorldQuaternion(this._quaternion);
+        this._matrixWorldInv.copy(this.object3d.matrixWorld).invert();
+        this.object3d.getWorldQuaternion(this._quaternion);
 
-        // this.boneAttachController.updateMatrix();
-        // for (let name in this.iks) {
-        //     var ik = this.iks[name];
-        //     var index = ik.indices[ik.indices.length - 1];
-        //     var cube = this.boneAttachController.getContainerList()[index];
-        //     let target = ik.target
+        this.boneAttachController.updateMatrix();
+        for (let name in this.iks) {
+            var ik = this.iks[name];
+            var index = ik.indices[ik.indices.length - 1];
+            var cube = this.boneAttachController.getContainerList()[index];
+            let target = ik.target
+            var position = cube.userData.ikPosition
 
-        //     target.position.copy(cube.position)
+            target.position.copy(position)
 
-        //     this.boneAttachController.updateOne(index);
-        // }
+            this.boneAttachController.updateOne(index);
+        }
     }
 
     public resetAllIkTargets(exclude: string = null) {
@@ -325,12 +326,12 @@ export class IKController {
         target.position.copy(position);
     }
 
-    public getLastPosition(name: string) {
+    public getLastPosition(name: string): THREE.Vector3 {
         var target = this.iks[name].target;
         var ik = this.iks[name];
         var index = ik.indices[ik.indices.length - 1];
         var lastMesh = this.boneAttachController.getContainerList()[index];
-        var position = lastMesh.position;
+        var position = lastMesh.userData.ikPosition
 
         if (this.enableEndSite(lastMesh)) {
             position = lastMesh.userData.endsite.getWorldPosition(this._pos);
@@ -404,18 +405,26 @@ export class IKController {
         this.setIkTarget(current.target);
     }
 
-    public onTransformSelectionChanged(target: THREE.Object3D) {
+    public onTransformSelectionChanged(pair: [TransformControls, THREE.Object3D]) {
         var scope = this;
         // ap.getSignal("ikSelectionChanged").remove(this.onIkSelectionChanged);
 
-        if (target == null) {
+        if (pair == null) {
             this.clearIkTarget();
-        } else if (target.userData.transformSelectionType == "BoneIk" && this._enabled) {
+        } else if (pair[1] && pair[1].userData.transformSelectionType == "BoneIk" && this._enabled) {
             if (scope.logging) {
                 console.log("IkController onTransformSelectionChanged");
             }
 
+            let control = pair[0]
+            let target = pair[1]
+
             scope.setIkTarget(target);
+
+            control.setMode("translate")
+            control.showX = true
+            control.showY = true
+            control.showZ = true
 
             if (scope.logging) {
                 console.log("IkController dispatch ikSelectionChanged", scope.getIkNameFromTarget(target));
@@ -465,17 +474,14 @@ export class IKController {
 
                 this.boneAttachController.update();
             } else {
-                this.updateIkTargets()
+                this.resetAllIkTargets()
             }
         }
     }
 
     public onTransformRotateChanged(pair: [TransformControls, THREE.Object3D]) {
         if (pair != null) {
-            let target = pair[1]
-            if (target.userData.transformSelectionType == "Joint") {
-                this.updateIkTargets()
-            }
+            this.resetAllIkTargets();
         }
     }
 
@@ -543,8 +549,8 @@ export class IKController {
         var forceUpdate = forceUpdate != undefined ? forceUpdate : false;
         var scope = this;
 
-        function getEndSitePos(lastMesh) {
-            var position = lastMesh.position;
+        function getEndSitePos(lastMesh: THREE.Object3D): THREE.Vector3 {
+            var position = lastMesh.userData.ikPosition;
             if (scope.enableEndSite(lastMesh)) {
                 position = lastMesh.userData.endsite.getWorldPosition(scope._pos);
             }
@@ -605,7 +611,7 @@ export class IKController {
                 var bone = this.boneAttachController.getBoneList()[ikBoneIndex];
                 var name = bone.name;
                 var joint = this.boneAttachController.getContainerList()[ikIndices[i]];
-                var jointPos = joint.position;
+                var jointPos = joint.userData.ikPosition
 
                 if (this.boneLocked[name]) {
                     if (this.logging) {

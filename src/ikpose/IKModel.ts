@@ -17,7 +17,7 @@ export class IKModel {
 
     private _onpc: ISignalHandler;
 
-    private _ontsc: ISimpleEventHandler<THREE.Object3D>;
+    private _ontsc: ISimpleEventHandler<[TransformControls, THREE.Object3D]>;
     private _onts: ISimpleEventHandler<THREE.Object3D>;
     private _ontf: ISimpleEventHandler<THREE.Object3D>;
     private _ontc: ISimpleEventHandler<[TransformControls, THREE.Object3D]>;
@@ -57,7 +57,6 @@ export class IKModel {
 
     addToScene(scene: THREE.Scene) {
         this.vrm.scene.add(this.ikController.object3d)
-        this.vrm.scene.add(this.boneAttachController.object3d);
         scene.add(this.vrm.scene);
 
         // this.vrm.scene.rotation.z = Math.PI / 2.24
@@ -69,7 +68,7 @@ export class IKModel {
         this.vrm.update(delta);
     }
 
-    onTransformSelectionChanged(target: THREE.Object3D) {
+    onTransformSelectionChanged(target: [TransformControls, THREE.Object3D]) {
         this.jointController.onTransformSelectionChanged(target);
         this.ikController.onTransformSelectionChanged(target);
     }

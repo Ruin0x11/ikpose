@@ -45,7 +45,8 @@ export class TransformHandler {
 
         //handle event
 
-        this.signals.onTransformSelectionChanged.subscribe(function(target: THREE.Object3D) {
+        this.signals.onTransformSelectionChanged.subscribe(function(pair: [TransformControls, THREE.Object3D]) {
+            let target = pair[1]
             if (scope.target && scope.target.userData.transformSelectionType == "Joint") {
                 scope.target.visible = false
             }
@@ -56,17 +57,16 @@ export class TransformHandler {
             }
         }); //, undefined, 100);//do first
 
-
-        this.signals.onLoadingModelFinished.subscribe(function(mesh) {
-            scope.control.detach();
-        });
-
         // events
 
         this._onpu = (event) => this.onPointerUp(event);
         window.addEventListener('pointerdown', (event) => this.onPointerDown(event), false);
         window.addEventListener('pointerup', this._onpu, false);
         window.addEventListener('pointermove', (event) => this.onPointerMove(event), false);
+    }
+
+    public selectTarget(target: THREE.Object3D) {
+        this.signals._onTransformSelectionChanged.dispatch([this.control, target]);
     }
 
     public setTarget(target: THREE.Object3D) {
@@ -172,7 +172,7 @@ export class TransformHandler {
                 }
 
                 if (visibles.length == 0) {
-                    this.signals._onTransformSelectionChanged.dispatch(null);
+                    this.selectTarget(null)
                     return;
                 }
 
@@ -191,10 +191,10 @@ export class TransformHandler {
 
                 var object = visibles[index].object;
 
-                this.signals._onTransformSelectionChanged.dispatch(object);
+                this.selectTarget(object)
 
             } else {
-                this.signals._onTransformSelectionChanged.dispatch(null);
+                this.selectTarget(null)
             }
         }
     }

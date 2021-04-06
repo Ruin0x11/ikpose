@@ -24,7 +24,7 @@ export class Signals {
         return this._onBoneRotateFinished.asEvent();
     }
 
-    public _onTransformSelectionChanged = new SimpleEventDispatcher<THREE.Object3D>();
+    public _onTransformSelectionChanged = new SimpleEventDispatcher<[TransformControls, THREE.Object3D]>();
     public get onTransformSelectionChanged() {
         return this._onTransformSelectionChanged.asEvent();
     }

@@ -20,7 +20,7 @@ export class IKPose {
     private ikModels: Array<IKModel> = [];
 
     public params: any = {
-        uniform: false
+        showIk: false
     };
 
     constructor() {
@@ -105,7 +105,6 @@ export class IKPose {
         this.signals.onJointSelectionChanged.subscribe((target: THREE.Object3D) => {
             if (target) {
                 scope.transformHandler.setTarget(target);
-                scope.transformHandler.control.setMode("rotate")
             }
             scope.render();
         })
@@ -119,10 +118,20 @@ export class IKPose {
     }
 
     private openGUI() {
+        let scope = this
+
         const gui = new dat.GUI();
 
-        gui.add(this.params, 'uniform');
+        gui.add(this.params, 'showIk').onChange((value) => scope.setShowIk(value));
         gui.open();
+    }
+
+    private setShowIk(enabled: boolean) {
+        for (let ikModel of this.ikModels) {
+            ikModel.ikController.setVisible(enabled);
+        }
+        this.transformHandler.selectTarget(null)
+        this.render()
     }
 
     public render() {
@@ -147,7 +156,7 @@ export class IKPose {
         const ikModel = new IKModel(this.signals, vrm)
         this.ikModels.push(ikModel);
         ikModel.vrm.humanoid.getBoneNode(VRMSchema.HumanoidBoneName.Hips).rotation.y = Math.PI;
-        ikModel.ikController.setVisible(true);
+        ikModel.ikController.setVisible(this.params.showIk);
         ikModel.addToScene(this.scene);
 
         console.log(vrm);
