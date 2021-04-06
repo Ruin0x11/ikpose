@@ -14,7 +14,6 @@ import BoneName = VRMSchema.HumanoidBoneName;
 export class HumanoidIK implements IIKSettings {
     public endSites: Array<any> = [];
     public ikTargets: any = {};
-    public objects: Array<THREE.Object3D> = [];
 
     private bodyHumanBoneNames: Array<string> = [BoneName.Hips, BoneName.Spine, BoneName.Chest, BoneName.UpperChest, BoneName.Neck, BoneName.Head];
     private humanBoneMap: Map<BoneName, string>;
@@ -149,7 +148,7 @@ export class HumanoidIK implements IIKSettings {
         material.visible = false;
         endsite.userData.joint = joint;
 
-        scope.endSites.push(endsite);
+        this.endSites.push(endsite);
 
         var ikBox = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.05), new THREE.MeshBasicMaterial({ color: 0x880000, depthTest: false, transparent: true, opacity: .5 }));
         ikBox.name = "ik-c-" + ikName;
@@ -158,8 +157,10 @@ export class HumanoidIK implements IIKSettings {
         //ikBox.position.copy(ap.ikControler.boneAttachControler.containerList[indices[indices.length-1]].position);
         ikBox.userData.ikName = ikName;//TODO move userData
         ikBox.userData.transformSelectionType = "BoneIk";
-        this.objects.push(ikBox);//TODO do at init for switch
+        this.ikController.addTarget(ikBox);//TODO do at init for switch
         this.ikController.iks[ikName].target = ikBox;
+
+        this.boneAttachController.targetBones(new Set(jointNames), true)
     }
 
     limitBone(boneList: THREE.Bone[], humanoidBoneName: BoneName, minX: number, minY: number, minZ: number, maxX: number, maxY: number, maxZ: number) {

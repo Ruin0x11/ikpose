@@ -32,7 +32,7 @@ export class IKPose {
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0xf0f0f0);
 
-        this.camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 10000);
+        this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 10000);
         this.camera.position.set(0.0, 2.5, 1.5);
         this.scene.add(this.camera);
 
@@ -93,6 +93,14 @@ export class IKPose {
 
         this.transformHandler = new TransformHandler(this.signals, this);
 
+        this.signals.onJointSelectionChanged.subscribe((target: THREE.Object3D) => {
+            if (target) {
+                scope.transformHandler.setTarget(target);
+                scope.transformHandler.control.setMode("rotate")
+            }
+            scope.render();
+        })
+
         this.signals.onIkSelectionChanged.subscribe((target: [THREE.Object3D, string]) => {
             if (target) {
                 scope.transformHandler.setTarget(target[0]);
@@ -147,6 +155,11 @@ export class IKPose {
 
     public getIkTargets(): THREE.Mesh[] {
         const result = this.ikModels.map((model) => model.ikController.getIkTargetsValue());
+        return [].concat.apply([], result);
+    }
+
+    public getJointTargets(): THREE.Mesh[] {
+        const result = this.ikModels.map((model) => model.boneAttachController.getContainerList());
         return [].concat.apply([], result);
     }
 }

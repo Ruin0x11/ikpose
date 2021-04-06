@@ -8,12 +8,14 @@ import { IIKSettings } from "./IIKSettings";
 import { IKData } from "./IKData";
 import { Signals } from "./Signals";
 import { ISignalHandler, ISimpleEventHandler } from "strongly-typed-events";
+import { TransformControls } from "three/examples/jsm/controls/TransformControls";
 
 export class IKController {
     public logging: boolean = false;
 
     public iks: Map<string, IKData> = new Map();
     private ikSettings: IIKSettings;
+    public object3d: THREE.Object3D = new THREE.Object3D();
 
     public ikLimitMin: Map<string, THREE.Vector3> = new Map();
     public ikLimitMax: Map<string, THREE.Vector3> = new Map();
@@ -45,6 +47,9 @@ export class IKController {
     private lastTargetMovedPosition: THREE.Vector3;
     private _euler: THREE.Euler;
     private _pos: THREE.Vector3;
+    private _cubeMatrix: THREE.Matrix4;
+    private _matrixWorldInv: THREE.Matrix4;
+    private _quaternion: THREE.Quaternion;
 
     private debug: boolean = false;
 
@@ -58,6 +63,9 @@ export class IKController {
         this.lastTargetMovedPosition = new THREE.Vector3();
         this._euler = new THREE.Euler();
         this._pos = new THREE.Vector3();
+        this._cubeMatrix = new THREE.Matrix4();
+        this._matrixWorldInv = new THREE.Matrix4();
+        this._quaternion = new THREE.Quaternion();
     }
 
     public onIkSelectionChanged(target: [THREE.Object3D, string]) {
@@ -88,6 +96,10 @@ export class IKController {
 
     public isEnabled() {
         return this._enabled;
+    }
+
+    public addTarget(target: THREE.Object3D) {
+        this.object3d.add(target)
     }
 
     public setBoneAttachController(boneAttachController: BoneAttachController) {
@@ -204,6 +216,7 @@ export class IKController {
     public getIkTargetsValue() {
         return Object.values(this.iks).map((ik) => ik.target)
     }
+    public g
 
     public setPresets(ikPresets) {
         if (this.ikPresets) {
@@ -273,6 +286,15 @@ export class IKController {
         return object.userData.endsite && object.userData.endsite.userData.enabled == true;
     }
 
+    public resetAllIkTargets(exclude: string = null) {
+        var scope = this;
+        this.boneAttachController.update();
+        Object.keys(this.iks).forEach(function(key) {
+            if (key != exclude)
+                scope.resetIkTargetPosition(key);
+        });
+    }
+
     public resetIkTargetPosition(name) {
         var target = this.iks[name].target;
         /*var indices=this.iks[name];
@@ -332,21 +354,19 @@ export class IKController {
         lastMesh.userData.endsite.userData.joint.material.visible = visible;
     }
 
-    public resetAllIkTargets(exclude: string = null) {
-        var scope = this;
-        this.boneAttachController.update();
-        Object.keys(this.iks).forEach(function(key) {
-            if (key != exclude)
-                scope.resetIkTargetPosition(key);
-        });
-    }
-
     public setIkTarget(target: THREE.Object3D) {
         if (target == null) {
             this.selectedIk = null;
+            this.signals._onIkSelectionChanged.dispatch(null);
+            this.resetAllIkTargets(null);//should add signal?
         } else {
             this.selectedIk = this.iks[target.userData.ikName]
+            this.signals._onIkSelectionChanged.dispatch([target, this.getIkNameFromTarget(target)]);
         }
+    }
+
+    public clearIkTarget() {
+        this.setIkTarget(null);
     }
 
     public solveOtherIkTargets() {
@@ -371,14 +391,8 @@ export class IKController {
         var scope = this;
         // ap.getSignal("ikSelectionChanged").remove(this.onIkSelectionChanged);
 
-        function onNotSelected() {
-            scope.setIkTarget(null);
-            scope.signals._onIkSelectionChanged.dispatch(null);
-            scope.resetAllIkTargets(null);//should add signal?
-        }
-
         if (target == null) {
-            onNotSelected();
+            this.clearIkTarget();
         } else if (target.userData.transformSelectionType == "BoneIk" && this._enabled) {
             if (scope.logging) {
                 console.log("IkController onTransformSelectionChanged");
@@ -386,53 +400,69 @@ export class IKController {
 
             scope.setIkTarget(target);
 
-            scope.signals._onIkSelectionChanged.dispatch([target, scope.getIkNameFromTarget(target)]);
-
             if (scope.logging) {
                 console.log("IkController dispatch ikSelectionChanged", scope.getIkNameFromTarget(target));
             }
         } else {//other
-            onNotSelected();
+            this.clearIkTarget();
         }
         // ap.getSignal("ikSelectionChanged").add(this.onIkSelectionChanged);
     }
 
-    public onTransformChanged(target: THREE.Object3D) {
-        if (target != null && target.userData.transformSelectionType == "BoneIk") {
-            if (this.logging) {
-                console.log("IkController onTransformChanged");
-            }
-
-            if (this._mouseDown == false) {
+    public onTransformChanged(pair: [TransformControls, THREE.Object3D]) {
+        if (pair != null) {
+            let target = pair[1]
+            if (target.userData.transformSelectionType == "BoneIk") {
                 if (this.logging) {
-                    console.log("IkController not mouse down");
+                    console.log("IkController onTransformChanged");
                 }
-                return;
-            }
 
-            if (this._solving) {
-                if (this.logging) {
-                    console.log("IkController still solving ignored");
+                if (this._mouseDown == false) {
+                    if (this.logging) {
+                        console.log("IkController not mouse down");
+                    }
+                    return;
                 }
-                return;
-            }
-            this._solving = true;
-            var solved = this.solveIk(false);
-            //_ikSolved overwrited in solveOtherIkTargets
-            this._solving = false;
 
-            if (solved) {
-                this._ikSolved[this.getIkNameFromTarget(target)] = true;
-                if (this.logging) {
-                    console.log("ik solved", this.getIkNameFromTarget(target));
+                if (this._solving) {
+                    if (this.logging) {
+                        console.log("IkController still solving ignored");
+                    }
+                    return;
                 }
-                //solve others,TODO independent
-                if (!this.followOtherIkTargets) {
-                    this.solveOtherIkTargets();
+                this._solving = true;
+                var solved = this.solveIk(false);
+                //_ikSolved overwrited in solveOtherIkTargets
+                this._solving = false;
+
+                if (solved) {
+                    this._ikSolved[this.getIkNameFromTarget(target)] = true;
+                    if (this.logging) {
+                        console.log("ik solved", this.getIkNameFromTarget(target));
+                    }
+                    //solve others,TODO independent
+                    if (!this.followOtherIkTargets) {
+                        this.solveOtherIkTargets();
+                    }
+                }
+
+                this.boneAttachController.update();
+            } else {
+                this._matrixWorldInv.copy(this.object3d.matrixWorld).invert();
+                this.object3d.getWorldQuaternion(this._quaternion);
+
+                this.boneAttachController.updateMatrix();
+                for (let name in this.iks) {
+                    var ik = this.iks[name];
+                    var index = ik.indices[ik.indices.length - 1];
+                    var cube = this.boneAttachController.getContainerList()[index];
+                    let target = ik.target
+
+                    target.position.copy(cube.position)
+
+                    this.boneAttachController.updateOne(index);
                 }
             }
-
-            this.boneAttachController.update();
         }
     }
 
@@ -476,7 +506,6 @@ export class IKController {
                     });
                 }
             });
-
         }
     }
 
@@ -572,7 +601,7 @@ export class IKController {
                     continue;
                 }
 
-                var jointRotQ = joint.quaternion;
+                // var jointRotQ = joint.quaternion;
 
                 //TODO improve,maybe never happen exactlly equals
                 if (targetPos.equals(lastJointPos)) {
@@ -702,8 +731,10 @@ export class IKController {
 
                 //bone.quaternion.multiply(newQ); //somehow not stable
             }
+
+            this.boneAttachController.updateMatrix();
             for (var i = ikIndicesLength; i >= 0; i--) {
-                this.boneAttachController.updateOne(ikIndices[i])
+                this.boneAttachController.updateOne(ikIndices[i]);
             }
         }
 

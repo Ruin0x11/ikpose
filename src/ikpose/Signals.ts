@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { SignalDispatcher, SimpleEventDispatcher } from "strongly-typed-events";
 import { IKModel } from "./IKModel";
+import { TransformControls } from "three/examples/jsm/controls/TransformControls";
 
 export class Signals {
     public _onBoneSelectionChanged = new SimpleEventDispatcher<number>();
@@ -38,7 +39,7 @@ export class Signals {
         return this._onTransformFinished.asEvent();
     }
 
-    public _onTransformChanged = new SimpleEventDispatcher<THREE.Object3D>();
+    public _onTransformChanged = new SimpleEventDispatcher<[TransformControls, THREE.Object3D]>();
     public get onTransformChanged() {
         return this._onTransformChanged.asEvent();
     }
@@ -61,6 +62,11 @@ export class Signals {
     public _onIkSelectionChanged = new SimpleEventDispatcher<[THREE.Object3D, string]>();
     public get onIkSelectionChanged() {
         return this._onIkSelectionChanged.asEvent();
+    }
+
+    public _onJointSelectionChanged = new SimpleEventDispatcher<THREE.Object3D>();
+    public get onJointSelectionChanged() {
+        return this._onJointSelectionChanged.asEvent();
     }
 
     public _onLoadingModelFinished = new SimpleEventDispatcher<IKModel>();

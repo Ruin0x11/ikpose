@@ -8,29 +8,36 @@ export class TransformHandler {
     public control: TransformControls;
 
     private lastSelection: THREE.Object3D = null;
+    private visibleJoint: THREE.Object3D = null;
 
     private onDownPosition = new THREE.Vector2();
     private onUpPosition = new THREE.Vector2();
+    private onMovePosition = new THREE.Vector2();
     private onDoubleClickPosition = new THREE.Vector2();
     private dragging: boolean = false;
 
     private _onpu: (PointerEvent) => void = null;
+
+    private _boneMatrix: THREE.Matrix4 = new THREE.Matrix4();
+    private _matrixWorldInv: THREE.Matrix4 = new THREE.Matrix4();
+    private _quaternion: THREE.Quaternion = new THREE.Quaternion();
 
     constructor(private signals: Signals, private ikpose: IKPose) {
         var scope = this;
 
         //transform
         this.control = new TransformControls(ikpose.camera, ikpose.renderer.domElement);
+        this.control.setSpace("local")
         this.control.addEventListener('dragging-changed', function(event) {
             scope.ikpose.controls.enabled = !event.value;
             scope.dragging = event.value;
         });
         this.control.addEventListener('change', function() {
             //called attached or moved
-            scope.ikpose.render();
             if (scope.dragging) {
-                scope.signals._onTransformChanged.dispatch(scope.target);
+                scope.signals._onTransformChanged.dispatch([scope.control, scope.target]);
             }
+            scope.ikpose.render();
         });
 
         this.control.detach();
@@ -39,6 +46,9 @@ export class TransformHandler {
         //handle event
 
         this.signals.onTransformSelectionChanged.subscribe(function(target: THREE.Object3D) {
+            if (scope.target && scope.target.userData.transformSelectionType == "Joint") {
+                scope.target.visible = false
+            }
             scope.target = target;
             if (target == null) {
                 scope.control.detach();
@@ -55,6 +65,7 @@ export class TransformHandler {
         this._onpu = (event) => this.onPointerUp(event);
         window.addEventListener('pointerdown', (event) => this.onPointerDown(event), false);
         window.addEventListener('pointerup', this._onpu, false);
+        window.addEventListener('pointermove', (event) => this.onPointerMove(event), false);
     }
 
     public setTarget(target: THREE.Object3D) {
@@ -96,9 +107,53 @@ export class TransformHandler {
         this.signals._onTransformStarted.dispatch(this.target);
     }
 
+    private onPointerMove(event: PointerEvent) {
+        var array = this.getMousePosition(this.ikpose.renderer.domElement, event.clientX, event.clientY);
+        this.onMovePosition.fromArray(array);
+
+        var intersects = this.getIntersects(this.onMovePosition, this.ikpose.getJointTargets());
+
+        let found = null;
+        if (intersects.length > 0) {
+            for (var i = 0; i < intersects.length; i++) {
+                let obj = intersects[i].object;
+                if (obj.userData.transformSelectionType == "Joint" && obj.userData.isTargetable) {
+                    found = obj
+                    break
+                }
+            }
+        }
+
+        let changed = false
+        if (found && found != this.visibleJoint) {
+            if (this.visibleJoint) {
+                this.visibleJoint.visible = false
+                this.visibleJoint = null
+            }
+            this.visibleJoint = found
+            this.visibleJoint.visible = true;
+            changed = true
+        }
+        else if (!found && this.visibleJoint) {
+            this.visibleJoint.visible = false
+            this.visibleJoint = null
+            changed = true
+        }
+        if (this.target) {
+            this.target.visible = true;
+        }
+        if (changed) {
+            this.ikpose.render();
+        }
+    }
+
     private handleClick() {
         if (this.onDownPosition.distanceTo(this.onUpPosition) === 0) {
-            var intersects = this.getIntersects(this.onUpPosition, this.ikpose.getIkTargets());
+            var targets: THREE.Object3D[] = this.ikpose.getIkTargets();
+            if (this.visibleJoint) {
+                targets.push(this.visibleJoint)
+            }
+            var intersects = this.getIntersects(this.onUpPosition, targets);
 
             if (intersects.length > 0) {
                 var index = -1;

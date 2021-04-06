@@ -8,7 +8,7 @@ export class BoneAttachController {
     private parentIndexs: any = {};
     private containerList: Array<THREE.Mesh> = [];
     private updateAll: boolean = true;
-    private object3d: THREE.Group;
+    public object3d: THREE.Group;
     private defaultBoneMatrixs: Array<any> = [];
 
     private visible: boolean = true;
@@ -18,13 +18,12 @@ export class BoneAttachController {
     private _quaternion: THREE.Quaternion;
     private boundingBox: THREE.Box3;
 
-    constructor(private readonly root: THREE.Group, color: number = 0x880000, boxSize: number = 2, visible: boolean = false) {
-        var material = { color: color, depthTest: false, transparent: true, opacity: .9 };
+    constructor(private readonly root: THREE.Group, color: number = 0x008800, boxSize: number = .05, visible: boolean = false) {
+        var material = { color: color, depthTest: false, transparent: true, opacity: .25 };
 
         this.root = root;
         root.updateMatrixWorld(true);
         this.boneList = BoneUtils.getBoneList(root);
-        console.log("BONES", this.boneList);
 
         this.object3d = new THREE.Group();
 
@@ -42,15 +41,18 @@ export class BoneAttachController {
             var container = new THREE.Mesh(new THREE.BoxGeometry(boxSize, boxSize, boxSize), new THREE.MeshPhongMaterial(material));
             container.name = "bac-" + name;
             container.renderOrder = 1;
-            scope.containerList.push(container);
+            container.visible = false;
+            container.rotation.copy(bone.rotation);
+            container.userData.transformSelectionType = "Joint";
             container.userData.bone = list[0];
+            container.userData.isTargetable = false;
+            scope.containerList.push(container);
             scope.object3d.add(container);
             //container.matrixAutoUpdate=false;
         });
 
         //default hide all
         this.setVisible(this.visible);
-
 
         this._boneMatrix = new THREE.Matrix4();
         this._matrixWorldInv = new THREE.Matrix4();
@@ -71,6 +73,19 @@ export class BoneAttachController {
         var object3d = this.object3d;
         if (object3d.parent != null) {
             object3d.parent.remove(object3d);
+        }
+    }
+
+    targetBones(boneNames: Set<string>, target: boolean) {
+        for (let mesh of this.containerList) {
+            if (boneNames.has(mesh.userData.bone.name)) {
+                if (target) {
+                    mesh.userData.isTargetable = true;
+                } else {
+                    mesh.userData.isTargetable = false;
+                    mesh.visible = false
+                }
+            }
         }
     }
 
@@ -135,6 +150,11 @@ export class BoneAttachController {
         if (!this.updateAll && cube.children.length == 0) {
             return
         }
+
+        // let rx = cube.rotation.x
+        // let ry = cube.rotation.y
+        // let rz = cube.rotation.z
+
         bone.updateMatrixWorld(true);//without update, deley few frame position
 
         this._boneMatrix.multiplyMatrices(this._matrixWorldInv, bone.matrixWorld);
@@ -144,6 +164,12 @@ export class BoneAttachController {
         bone.getWorldQuaternion(cube.quaternion);
         cube.quaternion.multiply(this._quaternion);
         cube.updateMatrixWorld(true);//for attach
+        // cube.rotation.set(rx, ry, rz)
+    }
+
+    updateMatrix() {
+        this._matrixWorldInv.copy(this.object3d.matrixWorld).invert();
+        this.object3d.getWorldQuaternion(this._quaternion);
     }
 
     //if delay frame call ap.skinnedMesh.updateMatrixWorld(true);
@@ -152,8 +178,7 @@ export class BoneAttachController {
             this.root.updateMatrixWorld(true);
         }
 
-        this._matrixWorldInv.copy(this.object3d.matrixWorld).invert();
-        this.object3d.getWorldQuaternion(this._quaternion);
+        this.updateMatrix();
 
         for (var i = 0; i < this.boneList.length; i++) {
             this.updateOne(i);
