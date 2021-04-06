@@ -46,6 +46,15 @@ export class IKPose {
 
         this.openGUI();
 
+        let scope = this
+        function onWindowResize(): void {
+            scope.camera.aspect = window.innerWidth / window.innerHeight;
+            scope.camera.updateProjectionMatrix();
+            scope.renderer.setSize(window.innerWidth, window.innerHeight);
+            scope.render()
+        }
+        window.addEventListener('resize', onWindowResize, false);
+
         this.render();
     }
 

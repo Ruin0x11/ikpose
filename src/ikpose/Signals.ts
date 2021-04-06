@@ -44,6 +44,11 @@ export class Signals {
         return this._onTransformChanged.asEvent();
     }
 
+    public _onTransformRotateChanged = new SimpleEventDispatcher<[TransformControls, THREE.Object3D]>();
+    public get onTransformRotateChanged() {
+        return this._onTransformRotateChanged.asEvent();
+    }
+
     public _onPoseChanged = new SignalDispatcher();
     public get onPoseChanged() {
         return this._onPoseChanged.asEvent();

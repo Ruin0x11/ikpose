@@ -286,6 +286,23 @@ export class IKController {
         return object.userData.endsite && object.userData.endsite.userData.enabled == true;
     }
 
+    updateIkTargets() {
+        this._matrixWorldInv.copy(this.object3d.matrixWorld).invert();
+        this.object3d.getWorldQuaternion(this._quaternion);
+
+        this.boneAttachController.updateMatrix();
+        for (let name in this.iks) {
+            var ik = this.iks[name];
+            var index = ik.indices[ik.indices.length - 1];
+            var cube = this.boneAttachController.getContainerList()[index];
+            let target = ik.target
+
+            target.position.copy(cube.position)
+
+            this.boneAttachController.updateOne(index);
+        }
+    }
+
     public resetAllIkTargets(exclude: string = null) {
         var scope = this;
         this.boneAttachController.update();
@@ -448,20 +465,16 @@ export class IKController {
 
                 this.boneAttachController.update();
             } else {
-                this._matrixWorldInv.copy(this.object3d.matrixWorld).invert();
-                this.object3d.getWorldQuaternion(this._quaternion);
+                this.updateIkTargets()
+            }
+        }
+    }
 
-                this.boneAttachController.updateMatrix();
-                for (let name in this.iks) {
-                    var ik = this.iks[name];
-                    var index = ik.indices[ik.indices.length - 1];
-                    var cube = this.boneAttachController.getContainerList()[index];
-                    let target = ik.target
-
-                    target.position.copy(cube.position)
-
-                    this.boneAttachController.updateOne(index);
-                }
+    public onTransformRotateChanged(pair: [TransformControls, THREE.Object3D]) {
+        if (pair != null) {
+            let target = pair[1]
+            if (target.userData.transformSelectionType == "Joint") {
+                this.updateIkTargets()
             }
         }
     }

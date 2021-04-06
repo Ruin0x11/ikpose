@@ -8,7 +8,7 @@ import { IKController } from "./IKController";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls";
 
 export class JointController {
-    public logging: boolean = true;
+    public logging: boolean = false;
 
     private selectedJoint: THREE.Object3D;
     private _mouseDown = false;
@@ -50,23 +50,13 @@ export class JointController {
     public onTransformChanged(pair: [TransformControls, THREE.Object3D]) {
         if (pair != null && pair[1].userData.transformSelectionType == "Joint" && pair[1].userData.isTargetable) {
             let target = pair[1]
-            if (this.logging) {
-                console.log("JointController onTransformChanged");
-            }
-
-            if (this._mouseDown == false) {
-                if (this.logging) {
-                    console.log("JointController not mouse down");
-                }
-                return;
-            }
 
             let bone: THREE.Bone = target.userData.bone
 
-            var r = target.rotation;
-
             const limitMin = this.ikController.ikLimitMin[bone.name];
             const limitMax = this.ikController.ikLimitMax[bone.name];
+
+            let r = target.rotation
 
             let x = r.x
             let y = r.y
@@ -105,12 +95,33 @@ export class JointController {
                 // console.log("LIMIT", r)
             }
 
+            target.rotation.set(x, y, z)
+        }
+    }
+
+    public onTransformRotateChanged(pair: [TransformControls, THREE.Object3D]) {
+        if (pair != null && pair[1].userData.transformSelectionType == "Joint" && pair[1].userData.isTargetable) {
+            let target = pair[1]
+            if (this.logging) {
+                console.log("JointController onTransformChanged");
+            }
+
+            if (this._mouseDown == false) {
+                if (this.logging) {
+                    console.log("JointController not mouse down");
+                }
+                return;
+            }
+
+            let bone: THREE.Bone = target.userData.bone
+
+            var r = target.rotation;
+
             // bone.rotation.y = y
             // target.rotation.y = y
-            bone.rotation.set(x, y, z)
+            bone.rotation.set(r.x, r.y, r.z)
             // pair[0].rotation.set(x, y, z)
-            target.rotation.set(x, y, z)
-            this.boneAttachController.update()
+            // this.boneAttachController.update()
         }
     }
 

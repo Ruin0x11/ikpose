@@ -18,10 +18,6 @@ export class TransformHandler {
 
     private _onpu: (PointerEvent) => void = null;
 
-    private _boneMatrix: THREE.Matrix4 = new THREE.Matrix4();
-    private _matrixWorldInv: THREE.Matrix4 = new THREE.Matrix4();
-    private _quaternion: THREE.Quaternion = new THREE.Quaternion();
-
     constructor(private signals: Signals, private ikpose: IKPose) {
         var scope = this;
 
@@ -32,11 +28,15 @@ export class TransformHandler {
             scope.ikpose.controls.enabled = !event.value;
             scope.dragging = event.value;
         });
-        this.control.addEventListener('change', function() {
+        this.control.addEventListener('change', function(a) {
             //called attached or moved
             if (scope.dragging) {
                 scope.signals._onTransformChanged.dispatch([scope.control, scope.target]);
             }
+            scope.ikpose.render();
+        });
+        this.control.addEventListener('rotationAngle-changed', function(a) {
+            scope.signals._onTransformRotateChanged.dispatch([scope.control, scope.target]);
             scope.ikpose.render();
         });
 

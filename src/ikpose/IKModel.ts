@@ -21,6 +21,7 @@ export class IKModel {
     private _onts: ISimpleEventHandler<THREE.Object3D>;
     private _ontf: ISimpleEventHandler<THREE.Object3D>;
     private _ontc: ISimpleEventHandler<[TransformControls, THREE.Object3D]>;
+    private _ontrc: ISimpleEventHandler<[TransformControls, THREE.Object3D]>;
 
     private _onbtc: ISimpleEventHandler<number>;
 
@@ -40,11 +41,13 @@ export class IKModel {
         this._onts = (target) => this.onTransformStarted(target);
         this._ontf = (target) => this.onTransformFinished(target);
         this._ontc = (target) => this.onTransformChanged(target);
+        this._ontrc = (target) => this.onTransformRotateChanged(target);
 
         this.signals.onTransformSelectionChanged.subscribe(this._ontsc);
         this.signals.onTransformStarted.subscribe(this._onts);
         this.signals.onTransformFinished.subscribe(this._ontf);
         this.signals.onTransformChanged.subscribe(this._ontc);
+        this.signals.onTransformRotateChanged.subscribe(this._ontrc);
 
         this._onbtc = () => this.ikController.resetAllIkTargets();
         this.signals.onBoneTranslateChanged.subscribe(this._onbtc);
@@ -85,6 +88,11 @@ export class IKModel {
         this.ikController.onTransformChanged(target);
     }
 
+    onTransformRotateChanged(target: [TransformControls, THREE.Object3D]) {
+        this.jointController.onTransformRotateChanged(target);
+        this.ikController.onTransformRotateChanged(target);
+    }
+
     dispose() {
         this.signals.onPoseChanged.unsubscribe(this._onpc);
 
@@ -92,6 +100,7 @@ export class IKModel {
         this.signals.onTransformStarted.unsubscribe(this._onts);
         this.signals.onTransformFinished.unsubscribe(this._ontf);
         this.signals.onTransformChanged.unsubscribe(this._ontc);
+        this.signals.onTransformRotateChanged.unsubscribe(this._ontrc);
 
         this.signals.onBoneTranslateChanged.unsubscribe(this._onbtc);
 
