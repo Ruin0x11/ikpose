@@ -158,6 +158,7 @@ export class IKPose {
         ikModel.vrm.scene.position.copy(pos)
         ikModel.vrm.humanoid.getBoneNode(VRMSchema.HumanoidBoneName.Hips).rotation.y = Math.PI;
         ikModel.ikController.setVisible(this.params.showIk);
+        ikModel.update(0)
         ikModel.addToScene(this.scene);
 
         console.log(vrm);

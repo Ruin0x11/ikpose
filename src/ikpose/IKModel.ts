@@ -67,6 +67,7 @@ export class IKModel {
 
     update(delta: number) {
         this.vrm.update(delta);
+        this.ikController.resetAllIkTargets();
     }
 
     onTransformSelectionChanged(target: [TransformControls, THREE.Object3D]) {
