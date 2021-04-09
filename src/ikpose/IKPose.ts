@@ -143,18 +143,19 @@ export class IKPose {
         // this.ikModels.forEach((model) => model.update(delta));
     }
 
-    public loadModel(url: string) {
+    public loadModel(url: string, pos: THREE.Vector3) {
         const loader = new GLTFLoader();
         loader.load(url,
-            (gltf) => VRM.from(gltf).then((vrm) => this.onModelLoadSuccess(vrm)),
+            (gltf) => VRM.from(gltf).then((vrm) => this.onModelLoadSuccess(vrm, pos)),
             (progress) => this.onModelLoadProgress(progress),
             (error) => this.onModelLoadError(error)
         );
     }
 
-    private onModelLoadSuccess(vrm: VRM) {
+    private onModelLoadSuccess(vrm: VRM, pos: THREE.Vector3) {
         const ikModel = new IKModel(this.signals, vrm)
         this.ikModels.push(ikModel);
+        ikModel.vrm.scene.position.copy(pos)
         ikModel.vrm.humanoid.getBoneNode(VRMSchema.HumanoidBoneName.Hips).rotation.y = Math.PI;
         ikModel.ikController.setVisible(this.params.showIk);
         ikModel.addToScene(this.scene);

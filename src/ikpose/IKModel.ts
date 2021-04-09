@@ -56,8 +56,9 @@ export class IKModel {
     }
 
     addToScene(scene: THREE.Scene) {
-        this.vrm.scene.add(this.ikController.object3d)
+        scene.add(this.ikController.object3d)
         scene.add(this.vrm.scene);
+        this.ikController.object3d.updateWorldMatrix(true, true);
 
         // this.vrm.scene.rotation.z = Math.PI / 2.24
         // this.vrm.scene.rotation.y = -Math.PI / 2.24
