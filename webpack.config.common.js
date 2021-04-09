@@ -25,6 +25,7 @@ module.exports = {
     }),
     new HtmlWebpackPlugin({
       template: "!!handlebars-loader!src/index.hbs",
+      baseUrl: process.env.NODE_ENV == "prod" ? "/ikpose" : "/"
     }),
   ],
 }
