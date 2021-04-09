@@ -58,16 +58,12 @@ export class IKModel {
     addToScene(scene: THREE.Scene) {
         scene.add(this.ikController.object3d)
         scene.add(this.vrm.scene);
+        this.ikController.clearIkTarget()
         this.ikController.object3d.updateWorldMatrix(true, true);
-
-        // this.vrm.scene.rotation.z = Math.PI / 2.24
-        // this.vrm.scene.rotation.y = -Math.PI / 2.24
-        // this.vrm.scene.rotation.x = Math.PI / 1.24
     }
 
     update(delta: number) {
         this.vrm.update(delta);
-        this.ikController.resetAllIkTargets();
     }
 
     onTransformSelectionChanged(target: [TransformControls, THREE.Object3D]) {
