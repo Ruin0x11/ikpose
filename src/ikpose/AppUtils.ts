@@ -38,7 +38,7 @@ export function enumKeys<O extends object, K extends keyof O = keyof O>(obj: O):
 
 export function stringMapToObject(strMap) {
     let obj = Object.create(null);
-    for (let [k, v] of strMap) {
+    for (let [k, v] of Object.entries(strMap)) {
         // We don’t escape the key '__proto__'
         // which can cause problems on older engines
         obj[k] = v;

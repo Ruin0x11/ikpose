@@ -3,11 +3,10 @@ import * as AppUtils from "./AppUtils";
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
-import { VRM, VRMSchema } from '@pixiv/three-vrm';
+import { VRM, VRMPose, VRMSchema } from '@pixiv/three-vrm';
 import { Signals } from "./Signals";
 import { IKModel } from "./IKModel";
 import { TransformHandler } from "./TransformHandler";
-import { Pose } from "./Pose";
 import Tweakpane from "tweakpane";
 import { FolderApi } from "tweakpane/dist/types/blade/folder/api/folder";
 import fileDialog from "file-dialog";
@@ -186,7 +185,7 @@ export class IKPose {
         fetch(url)
             .then((resp) => resp.json())
             .then((pose) => {
-                ikModel.loadPose(pose as Pose)
+                ikModel.loadPose(pose as VRMPose)
                 scope.render()
             })
     }
@@ -199,7 +198,7 @@ export class IKPose {
             .then(files => {
                 let reader = new FileReader()
                 reader.addEventListener("load", () => {
-                    let pose: Pose = JSON.parse(reader.result as string)
+                    let pose: VRMPose = JSON.parse(reader.result as string)
                     ikModel.loadPose(pose)
                     scope.render()
                 });
@@ -238,6 +237,8 @@ export class IKPose {
             .on("click", () => scope.queryLoadPose(ikModel))
         folder.addButton({ title: "Save Pose" })
             .on("click", () => scope.savePose(ikModel))
+        folder.addButton({ title: "Reset Pose" })
+            .on("click", () => ikModel.resetPose())
 
         console.log(vrm);
         this.render();
