@@ -25,9 +25,11 @@ export class IKPose {
     public transformHandler: TransformHandler;
 
     private ikModels: Array<IKModel> = [];
+    private clock: THREE.Clock;
 
     public params: any = {
-        showIk: true
+        showIk: true,
+        updateModels: true
     };
 
     constructor() {
@@ -44,6 +46,7 @@ export class IKPose {
         this.scene.add(this.camera);
 
         this.signals = new Signals();
+        this.clock = new THREE.Clock()
 
         this.addLight();
         this.addPlane();
@@ -53,16 +56,11 @@ export class IKPose {
 
         this.openGUI();
 
-        let scope = this
-        function onWindowResize(): void {
-            scope.camera.aspect = window.innerWidth / window.innerHeight;
-            scope.camera.updateProjectionMatrix();
-            scope.renderer.setSize(window.innerWidth, window.innerHeight);
-            scope.render()
-        }
-        window.addEventListener('resize', onWindowResize, false);
-
         this.render();
+
+        if (this.params.updateModels) {
+            this.loopUpdate();
+        }
     }
 
     private addLight() {
@@ -124,14 +122,24 @@ export class IKPose {
             }
             scope.render();
         })
+
+        function onWindowResize(): void {
+            scope.camera.aspect = window.innerWidth / window.innerHeight;
+            scope.camera.updateProjectionMatrix();
+            scope.renderer.setSize(window.innerWidth, window.innerHeight);
+            scope.render()
+        }
+        window.addEventListener('resize', onWindowResize, false);
     }
 
     private openGUI() {
         let scope = this
 
         this.gui = new Tweakpane()
-        this.gui.addInput(this.params, "showIk")
-            .on("change", (ev) => { scope.setShowIk(ev.value) })
+        this.gui.addInput(this.params, "showIk", { label: "Show IK" })
+            .on("change", (ev) => scope.setShowIk(ev.value))
+        this.gui.addInput(this.params, "updateModels", { label: "Update Models" })
+            .on("change", (ev) => this.loopUpdate())
 
         this.folderModels = this.gui.addFolder({ title: "Models" })
     }
@@ -149,7 +157,18 @@ export class IKPose {
     }
 
     public update(delta: number) {
-        // this.ikModels.forEach((model) => model.update(delta));
+        this.ikModels.forEach((model) => model.update(delta));
+    }
+
+    private loopUpdate() {
+        if (this.params.updateModels) {
+            window.requestAnimationFrame(this.loopUpdate.bind(this));
+
+            let delta = this.clock.getDelta();
+
+            this.update(delta)
+            this.render()
+        }
     }
 
     public loadModel(url: string, pos: THREE.Vector3) {
@@ -192,7 +211,11 @@ export class IKPose {
     public savePose(ikModel: IKModel) {
         let pose = ikModel.serializePose();
 
-        let filename = "dood.json"
+        let filename = window.prompt("Please enter a filename.", "pose")
+        if (filename == null) {
+            return
+        }
+        filename = `${filename}.json`
 
         let obj = AppUtils.stringMapToObject(pose)
         let json = JSON.stringify(obj)
