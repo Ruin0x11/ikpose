@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import * as dat from "dat.gui";
+import * as AppUtils from "./AppUtils";
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
@@ -7,12 +7,19 @@ import { VRM, VRMSchema } from '@pixiv/three-vrm';
 import { Signals } from "./Signals";
 import { IKModel } from "./IKModel";
 import { TransformHandler } from "./TransformHandler";
+import { Pose } from "./Pose";
+import Tweakpane from "tweakpane";
+import { FolderApi } from "tweakpane/dist/types/blade/folder/api/folder";
+import fileDialog from "file-dialog";
+import FileSaver from "file-saver";
 
 export class IKPose {
     public renderer: THREE.WebGLRenderer;
     public camera: THREE.PerspectiveCamera;
     public scene: THREE.Scene;
     public signals: Signals;
+    public gui: Tweakpane;
+    private folderModels: FolderApi;
 
     public controls: OrbitControls;
     public transformHandler: TransformHandler;
@@ -33,7 +40,7 @@ export class IKPose {
         this.scene.background = new THREE.Color(0xf0f0f0);
 
         this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 10000);
-        this.camera.position.set(0.0, 2.5, 1.5);
+        this.camera.position.set(0.0, 2.0, -3.5);
         this.scene.add(this.camera);
 
         this.signals = new Signals();
@@ -99,6 +106,8 @@ export class IKPose {
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
         // controls.damping = 0.2;
         this.controls.addEventListener('change', () => scope.render());
+        this.controls.target.set(0.0, 1.0, 0.0)
+        this.controls.update()
 
         this.transformHandler = new TransformHandler(this.signals, this);
 
@@ -120,10 +129,11 @@ export class IKPose {
     private openGUI() {
         let scope = this
 
-        const gui = new dat.GUI();
+        this.gui = new Tweakpane()
+        this.gui.addInput(this.params, "showIk")
+            .on("change", (ev) => { scope.setShowIk(ev.value) })
 
-        gui.add(this.params, 'showIk').onChange((value) => scope.setShowIk(value));
-        gui.open();
+        this.folderModels = this.gui.addFolder({ title: "Models" })
     }
 
     private setShowIk(enabled: boolean) {
@@ -151,13 +161,60 @@ export class IKPose {
         );
     }
 
+    public loadPose(ikModel: IKModel, url: string) {
+        var scope = this
+
+        fetch(url)
+            .then((resp) => resp.json())
+            .then((pose) => {
+                ikModel.loadPose(pose as Pose)
+                scope.render()
+            })
+    }
+
+    private queryLoadPose(ikModel: IKModel) {
+        let pose = "/assets/poses/gaoo.json"
+        var scope = this
+
+        fileDialog({ multiple: false, accept: "application/json" })
+            .then(files => {
+                let reader = new FileReader()
+                reader.addEventListener("load", () => {
+                    let pose: Pose = JSON.parse(reader.result as string)
+                    ikModel.loadPose(pose)
+                    scope.render()
+                });
+
+                reader.readAsText(files[0]);
+            })
+    }
+
+    public savePose(ikModel: IKModel) {
+        let pose = ikModel.serializePose();
+
+        let filename = "dood.json"
+
+        let obj = AppUtils.stringMapToObject(pose)
+        let json = JSON.stringify(obj)
+
+        let blob = new Blob([json], { type: "application/json;charset=utf-8" })
+        FileSaver.saveAs(blob, filename)
+    }
+
     private onModelLoadSuccess(vrm: VRM, pos: THREE.Vector3) {
         const ikModel = new IKModel(this.signals, vrm)
         this.ikModels.push(ikModel);
         ikModel.vrm.scene.position.copy(pos)
-        ikModel.vrm.humanoid.getBoneNode(VRMSchema.HumanoidBoneName.Hips).rotation.y = Math.PI;
         ikModel.ikController.setVisible(this.params.showIk);
         ikModel.addToScene(this.scene);
+
+        var scope = this
+
+        let folder = this.folderModels.addFolder({ expanded: true, title: ikModel.vrm.meta.title })
+        folder.addButton({ title: "Load Pose" })
+            .on("click", () => scope.queryLoadPose(ikModel))
+        folder.addButton({ title: "Save Pose" })
+            .on("click", () => scope.savePose(ikModel))
 
         console.log(vrm);
         this.render();

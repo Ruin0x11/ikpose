@@ -31,3 +31,17 @@ export function lineTo(mesh1: THREE.Mesh, mesh2: THREE.Mesh) {
     mesh1.add(joint);
     return joint;
 }
+
+export function enumKeys<O extends object, K extends keyof O = keyof O>(obj: O): K[] {
+    return Object.keys(obj) as K[];
+}
+
+export function stringMapToObject(strMap) {
+    let obj = Object.create(null);
+    for (let [k, v] of strMap) {
+        // We don’t escape the key '__proto__'
+        // which can cause problems on older engines
+        obj[k] = v;
+    }
+    return obj;
+}

@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import * as AppUtils from "./AppUtils";
 import { VRM } from "@pixiv/three-vrm/types/VRM";
 import { BoneAttachController } from "./BoneAttachController";
 import { IKController } from "./IKController";
@@ -8,6 +9,8 @@ import { HumanoidIK } from "./HumanoidIK";
 import { IIKSettings } from "./IIKSettings";
 import { JointController } from "./JointController";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls";
+import { VRMSchema } from "@pixiv/three-vrm";
+import { Pose } from "./Pose";
 
 export class IKModel {
     public boneAttachController: BoneAttachController;
@@ -60,6 +63,35 @@ export class IKModel {
         scene.add(this.vrm.scene);
         this.ikController.clearIkTarget()
         this.ikController.object3d.updateWorldMatrix(true, true);
+    }
+
+    loadPose(poseData: Pose) {
+        for (let key in poseData) {
+            let bone = this.vrm.humanoid.getBoneNode(key as VRMSchema.HumanoidBoneName)
+            if (bone) {
+                let boneData = poseData[key]
+                if (boneData) {
+                    let rotation: number[] = boneData.rotation
+                    bone.quaternion.set(rotation[0], rotation[1], rotation[2], rotation[3])
+                } else {
+                    bone.quaternion.set(0, 0, 0, 0)
+                }
+            }
+        }
+        this.ikController.clearIkTarget()
+    }
+
+    serializePose(): Pose {
+        let pose = new Map();
+        for (let key in VRMSchema.HumanoidBoneName) {
+            let name = VRMSchema.HumanoidBoneName[key]
+            let bone = this.vrm.humanoid.getBoneNode(name)
+            if (bone) {
+                let boneQ = bone.quaternion
+                pose.set(name, { rotation: [boneQ.x, boneQ.y, boneQ.z, boneQ.w] })
+            }
+        }
+        return pose
     }
 
     update(delta: number) {

@@ -1,5 +1,4 @@
 import { VRMHumanBone, VRMHumanBones } from "@pixiv/three-vrm/types/humanoid";
-import { VRMSchema } from "@pixiv/three-vrm/types/types";
 import { VRM } from "@pixiv/three-vrm/types/VRM";
 import * as THREE from "three";
 import * as BoneUtils from "./BoneUtils"
