@@ -190,22 +190,22 @@ export class HumanoidIK implements IIKSettings {
         this.limitBone(boneList, BoneName.Head, -15, -30, -20, 15, 30, 20);
 
         this.limitBone(boneList, BoneName.LeftShoulder, 0, 0, -45, 0, 15, 0);
-        this.limitBone(boneList, BoneName.LeftUpperArm, -45, -75, -45, 45, 45, 85);
-        this.limitBone(boneList, BoneName.LeftLowerArm, -0, -150, 0, 0, 0, 0);
+        this.limitBone(boneList, BoneName.LeftUpperArm, -115, -75, -45, 115, 45, 85);
+        this.limitBone(boneList, BoneName.LeftLowerArm, -65, -150, 0, 45, 0, 0);
         this.limitBone(boneList, BoneName.LeftHand, 0, 0, -45, 0, 45, 65);
 
         this.limitBone(boneList, BoneName.RightShoulder, 0, -15, 0, 0, 0, 45);
-        this.limitBone(boneList, BoneName.RightUpperArm, -45, -45, -85, 45, 75, 45);
-        this.limitBone(boneList, BoneName.RightLowerArm, 0, 0, 0, 0, 150, 0);
+        this.limitBone(boneList, BoneName.RightUpperArm, -115, -45, -85, 115, 75, 45);
+        this.limitBone(boneList, BoneName.RightLowerArm, -45, 0, 0, 65, 150, 0);
         this.limitBone(boneList, BoneName.RightHand, 0, -45, -65, 0, 0, 45);
 
         this.limitBone(boneList, BoneName.LeftUpperLeg, -60, 0, -75, 120, 0, 75);
         this.limitBone(boneList, BoneName.LeftLowerLeg, -160, 0, 0, 0, 0, 0);
-        this.limitBone(boneList, BoneName.LeftFoot, -15, -5, -5, 15, 5, 5);
+        this.limitBone(boneList, BoneName.LeftFoot, -35, -5, -5, 25, 5, 5);
 
         this.limitBone(boneList, BoneName.RightUpperLeg, -60, 0, -75, 120, 0, 75);
         this.limitBone(boneList, BoneName.RightLowerLeg, -160, 0, 0, 0, 0, 0);
-        this.limitBone(boneList, BoneName.RightFoot, -15, -5, -5, 15, 5, 5);
+        this.limitBone(boneList, BoneName.RightFoot, -35, -5, -5, 25, 5, 5);
 
         /*boneList.forEach(function(bone){
           limitBone(boneList,bone.name,-180,-180,-180,180,180,180);
