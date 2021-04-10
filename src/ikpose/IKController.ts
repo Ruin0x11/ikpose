@@ -411,7 +411,7 @@ export class IKController {
 
         if (pair == null) {
             this.clearIkTarget();
-        } else if (pair[1] && pair[1].userData.transformSelectionType == "BoneIk" && this._enabled) {
+        } else if (pair[1] && pair[1].userData.transformSelectionType == "BoneIk" && this._enabled && pair[1].userData.parentId == this.boneAttachController.object3d.id) {
             if (scope.logging) {
                 console.log("IkController onTransformSelectionChanged");
             }
@@ -421,18 +421,20 @@ export class IKController {
 
             scope.setIkTarget(target);
 
-            control.setMode("translate")
-            control.showX = true
-            control.showY = true
-            control.showZ = true
+            if (target.userData.parentId == this.boneAttachController.object3d.id) {
+                control.setMode("translate")
+                control.showX = true
+                control.showY = true
+                control.showZ = true
 
-            if (scope.logging) {
-                console.log("IkController dispatch ikSelectionChanged", scope.getIkNameFromTarget(target));
+                if (scope.logging) {
+                    console.log("IkController dispatch ikSelectionChanged", scope.getIkNameFromTarget(target));
+                }
+            } else {//other
+                this.clearIkTarget();
             }
-        } else {//other
-            this.clearIkTarget();
+            // ap.getSignal("ikSelectionChanged").add(this.onIkSelectionChanged);
         }
-        // ap.getSignal("ikSelectionChanged").add(this.onIkSelectionChanged);
     }
 
     public onTransformChanged(pair: [TransformControls, THREE.Object3D]) {

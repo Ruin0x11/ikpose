@@ -82,10 +82,12 @@ export class HumanoidIK implements IIKSettings {
         this.hipBoneNames = resolveMapBoneName([BoneName.Hips, BoneName.Spine]);
         if (this.hipBoneNames.length > 1) {
             this.registIk(this.ikTargets, "Hip", this.hipBoneNames);
+        }
 
-            for (let name of this.hipBoneNames) {
-                this.boneAttachController.setCanTranslate(name, true)
-            }
+        // In VRM the hip bone is specified to have no parent.
+        let hipBoneName = resolveMapBoneName([BoneName.Hips]);
+        if (hipBoneName.length > 0) {
+            this.boneAttachController.setCanTranslate(hipBoneName[0], true)
         }
 
         /*//this.registIk(this.ikTargets,"Hip",["root","spine01"]);//
@@ -159,6 +161,7 @@ export class HumanoidIK implements IIKSettings {
         //ikBox.position.copy(ap.ikControler.boneAttachControler.containerList[indices[indices.length-1]].position);
         ikBox.userData.ikName = ikName;//TODO move userData
         ikBox.userData.transformSelectionType = "BoneIk";
+        ikBox.userData.parentId = this.boneAttachController.object3d.id
         this.ikController.addTarget(ikBox);//TODO do at init for switch
         this.ikController.iks[ikName].target = ikBox;
 

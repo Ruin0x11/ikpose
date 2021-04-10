@@ -18,8 +18,21 @@ export class BoneAttachController {
     private _quaternion: THREE.Quaternion;
     private boundingBox: THREE.Box3;
 
+    private boxMaterial: THREE.Material;
+    private translateBoxMaterial: THREE.Material;
+    private boxGeometry: THREE.BufferGeometry;
+    private translateBoxGeometry: THREE.BufferGeometry;
+
     constructor(private readonly root: THREE.Group, color: number = 0x008800, boxSize: number = .05, visible: boolean = false) {
         var material = { color: color, depthTest: false, transparent: true, opacity: .25 };
+
+        this.boxMaterial = new THREE.MeshPhongMaterial(material)
+
+        var translateMaterial = { color: 0x880088, depthTest: false, transparent: true, opacity: .25 };
+        this.translateBoxMaterial = new THREE.MeshPhongMaterial(translateMaterial)
+
+        this.boxGeometry = new THREE.BoxGeometry(boxSize, boxSize, boxSize)
+        this.translateBoxGeometry = new THREE.BoxGeometry(boxSize * 2, boxSize * 2, boxSize * 2)
 
         this.root = root;
         root.updateMatrixWorld(true);
@@ -38,7 +51,7 @@ export class BoneAttachController {
                 bone = bone.parent as THREE.Bone;
             }
             scope.parentIndexs[name] = list;
-            var container = new THREE.Mesh(new THREE.BoxGeometry(boxSize, boxSize, boxSize), new THREE.MeshPhongMaterial(material));
+            var container = new THREE.Mesh(scope.boxGeometry, scope.boxMaterial);
             container.name = "bac-" + name;
             container.renderOrder = 1;
             container.visible = false;
@@ -47,6 +60,7 @@ export class BoneAttachController {
             container.userData.isTargetable = false;
             container.userData.canTranslate = false;
             container.userData.ikPosition = new THREE.Vector3();
+            container.userData.parentId = scope.object3d.id
             scope.containerList.push(container);
             // scope.object3d.add(container);
             list[0].add(container)
@@ -81,7 +95,16 @@ export class BoneAttachController {
 
     setCanTranslate(boneName: string, enabled: boolean) {
         let index = this.getBoneIndexByBoneName(boneName);
-        this.containerList[index].userData.canTranslate = enabled
+        let mesh = this.containerList[index]
+        mesh.userData.canTranslate = enabled
+
+        if (enabled) {
+            mesh.geometry = this.translateBoxGeometry
+            mesh.material = this.translateBoxMaterial
+        } else {
+            mesh.geometry = this.boxGeometry
+            mesh.material = this.boxMaterial
+        }
     }
 
     targetBones(boneNames: Set<string>, target: boolean) {

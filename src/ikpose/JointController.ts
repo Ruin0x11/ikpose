@@ -36,7 +36,7 @@ export class JointController {
 
         if (pair == null) {
             this.clearJointTarget();
-        } else if (pair[1] && pair[1].userData.transformSelectionType == "Joint" && pair[1].userData.isTargetable && this._enabled) {
+        } else if (pair[1] && pair[1].userData.transformSelectionType == "Joint" && pair[1].userData.isTargetable && this._enabled && pair[1].userData.parentId == this.boneAttachController.object3d.id) {
             if (scope.logging) {
                 console.log("JointController onTransformSelectionChanged");
             }

@@ -47,12 +47,15 @@ export class TransformHandler {
 
         this.signals.onTransformSelectionChanged.subscribe(function(pair: [TransformControls, THREE.Object3D]) {
             let target = pair[1]
-            if (scope.target && scope.target.userData.transformSelectionType == "Joint") {
-                scope.target.visible = false
+            if (scope.target) {
                 scope.target.userData.isSelected = false
+                if (scope.target.userData.transformSelectionType == "Joint" && scope.target != target) {
+                    scope.target.visible = false
+                }
             }
 
             scope.target = target;
+
             if (target == null) {
                 scope.control.detach();
             } else {
@@ -197,7 +200,6 @@ export class TransformHandler {
                 var object = visibles[index].object;
 
                 this.selectTarget(object)
-
             } else {
                 this.selectTarget(null)
             }

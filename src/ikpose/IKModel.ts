@@ -65,6 +65,9 @@ export class IKModel {
     }
 
     loadPose(poseData: VRMPose) {
+        for (let [k, v] of Object.entries(poseData)) {
+            poseData[k].position = undefined
+        }
         this.vrm.humanoid.setPose(poseData)
         this.ikController.clearIkTarget()
     }
